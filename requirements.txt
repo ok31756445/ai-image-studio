@@ -1,0 +1,6 @@
+# The browser application has no Python runtime dependency.
+# These packages are used only to generate and verify the project report.
+reportlab==4.4.4
+pdfplumber==0.11.8
+pypdf==6.1.1
+Pillow==12.0.0

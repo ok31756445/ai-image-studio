@@ -27,6 +27,8 @@ const PRESETS = Object.freeze({
 const MIME_LABELS = {
   "image/png": "PNG",
   "image/jpeg": "JPEG",
+  "image/bmp": "BMP",
+  "image/x-ms-bmp": "BMP",
   "image/webp": "WebP",
   "image/gif": "GIF"
 };
@@ -44,6 +46,7 @@ const elements = {
   canvasFrame: $("#canvasFrame"),
   canvasStack: $("#canvasStack"),
   editCanvas: $("#editCanvas"),
+  analysisCanvas: $("#analysisCanvas"),
   compareCanvas: $("#compareCanvas"),
   faceOverlay: $("#faceOverlay"),
   compareButton: $("#compareButton"),
@@ -51,6 +54,12 @@ const elements = {
   compareRangeWrap: $("#compareRangeWrap"),
   compareRange: $("#compareRange"),
   cropOverlay: $("#cropOverlay"),
+  cropOverlayLabel: $("#cropOverlayLabel"),
+  resizeOverlay: $("#resizeOverlay"),
+  resizeOverlayLabel: $("#resizeOverlayLabel"),
+  toggleResizeDrag: $("#toggleResizeDrag"),
+  toggleCropDrag: $("#toggleCropDrag"),
+  resizeDetails: $("#resizeDetails"),
   cropDetails: $("#cropDetails"),
   cropHelp: $("#cropHelp"),
   cropX: $("#cropX"),
@@ -82,6 +91,8 @@ const elements = {
   statMegapixels: $("#statMegapixels"),
   statFormat: $("#statFormat"),
   statSize: $("#statSize"),
+  statChannels: $("#statChannels"),
+  statBitDepth: $("#statBitDepth"),
   formatField: $("#formatField"),
   qualityRange: $("#qualityRange"),
   qualityValue: $("#qualityValue"),
@@ -95,6 +106,7 @@ const elements = {
 
 const baseCanvas = document.createElement("canvas");
 const originalCanvas = document.createElement("canvas");
+const comparisonOverrideCanvas = document.createElement("canvas");
 const settings = { ...DEFAULT_SETTINGS };
 const undoStack = [];
 const redoStack = [];
@@ -108,6 +120,9 @@ let ratioLocked = true;
 let compareActive = false;
 let temporaryCompare = false;
 let activeComparePointerId = null;
+let canvasToolMode = null;
+let canvasToolDrag = null;
+let hasComparisonOverride = false;
 let restoringHistory = false;
 
 function formatBytes(bytes) {
@@ -144,7 +159,8 @@ function setLoadedControls(enabled) {
     "#presetGrid button", "#adjustmentControls input", "#resetAdjustments",
     "#rotateLeft", "#rotateRight", "#flipHorizontal", "#flipVertical",
     "#resizeWidth", "#resizeHeight", "#ratioLock", "#applyResize",
-    "#cropX", "#cropY", "#cropWidth", "#cropHeight", "#resetCrop", "#applyCrop", "#analyzeFacesButton",
+    "#toggleResizeDrag", "#cropX", "#cropY", "#cropWidth", "#cropHeight", "#toggleCropDrag", "#resetCrop", "#applyCrop", "#analyzeFacesButton",
+    "#kernelSize", "#kernelPreset", "#kernelNormalization", "#kernelDivisor", "#kernelBias", "#applyKernel", ".kernel-cell", ".channel-mode",
     "#resetButton", "#compareButton", "#zoomSelect", "#exportName", "#downloadButton", "#exportShortcut"
   ];
   selectors.forEach((selector) => $$(selector).forEach((element) => { element.disabled = !enabled; }));
@@ -171,6 +187,7 @@ function pushHistory() {
   undoStack.push(snapshot());
   if (undoStack.length > MAX_HISTORY) undoStack.shift();
   redoStack.length = 0;
+  hasComparisonOverride = false;
   updateHistoryButtons();
 }
 
@@ -300,7 +317,12 @@ function renderNow() {
   elements.compareCanvas.height = before.height;
 
   compareContext.clearRect(0, 0, before.width, before.height);
-  compareContext.drawImage(before, 0, 0);
+  const compareSource = hasComparisonOverride
+    && comparisonOverrideCanvas.width === before.width
+    && comparisonOverrideCanvas.height === before.height
+    ? comparisonOverrideCanvas
+    : before;
+  compareContext.drawImage(compareSource, 0, 0);
 
   const brightness = Math.max(0, 100 + settings.brightness);
   const contrast = Math.max(0, 100 + settings.contrast);
@@ -362,11 +384,13 @@ function updateCanvasDisplay() {
   elements.canvasFrame.style.height = `${displayHeight}px`;
   elements.canvasStack.style.width = `${displayWidth}px`;
   elements.canvasStack.style.height = `${displayHeight}px`;
-  [elements.editCanvas, elements.compareCanvas, elements.faceOverlay].forEach((canvas) => {
+  [elements.editCanvas, elements.analysisCanvas, elements.compareCanvas, elements.faceOverlay].forEach((canvas) => {
     canvas.style.width = `${displayWidth}px`;
     canvas.style.height = `${displayHeight}px`;
   });
   elements.canvasStatus.textContent = `${Math.round(scale * 100)}% · ${elements.editCanvas.width.toLocaleString()} × ${elements.editCanvas.height.toLocaleString()} px`;
+  if (canvasToolMode === "resize") updateResizeOverlay();
+  if (canvasToolMode === "crop") updateCropOverlay();
 }
 
 function updateCompareView() {
@@ -450,6 +474,8 @@ function updateImageStats() {
   elements.statMegapixels.textContent = `${megapixels.toFixed(megapixels < 10 ? 1 : 0)} MP`;
   elements.statFormat.textContent = MIME_LABELS[fileInfo.type] || "影像";
   elements.statSize.textContent = formatBytes(fileInfo.size);
+  elements.statChannels.textContent = "RGBA · 4 通道";
+  elements.statBitDepth.textContent = "8 bit / channel";
   elements.fileMeta.textContent = `${width.toLocaleString()} × ${height.toLocaleString()} px · ${formatBytes(fileInfo.size)}`;
 }
 
@@ -526,7 +552,7 @@ function updateCropOverlay() {
   elements.cropHelp.classList.toggle("is-warning", transformed);
   elements.cropHelp.textContent = transformed
     ? "裁切座標以旋轉前影像為準；套用後仍會保留目前方向。"
-    : "輸入像素範圍，畫布會即時顯示裁切框。";
+    : "輸入像素範圍，或直接在畫布拖曳裁切框。";
 
   if (transformed) {
     elements.cropOverlay.hidden = true;
@@ -538,8 +564,176 @@ function updateCropOverlay() {
   elements.cropOverlay.style.top = `${y / baseCanvas.height * 100}%`;
   elements.cropOverlay.style.width = `${width / baseCanvas.width * 100}%`;
   elements.cropOverlay.style.height = `${height / baseCanvas.height * 100}%`;
+  elements.cropOverlayLabel.textContent = `${width.toLocaleString()} × ${height.toLocaleString()} px`;
   elements.cropOverlay.style.setProperty("--crop-third", `${elements.cropOverlay.clientHeight / 3}px`);
   elements.cropOverlay.style.setProperty("--crop-third-x", `${elements.cropOverlay.clientWidth / 3}px`);
+}
+
+function hasDirectionTransform() {
+  return settings.rotation % 360 !== 0 || settings.flipX || settings.flipY;
+}
+
+function setCanvasToolMode(mode) {
+  if (mode && hasDirectionTransform()) {
+    showToast("請先將旋轉與翻轉還原，再使用畫布拖曳工具");
+    return;
+  }
+  canvasToolMode = canvasToolMode === mode ? null : mode;
+  elements.toggleResizeDrag.setAttribute("aria-pressed", String(canvasToolMode === "resize"));
+  elements.toggleCropDrag.setAttribute("aria-pressed", String(canvasToolMode === "crop"));
+  elements.resizeOverlay.hidden = canvasToolMode !== "resize";
+  elements.canvasStack.classList.toggle("is-resize-tool", canvasToolMode === "resize");
+  elements.canvasStack.classList.toggle("is-crop-tool", canvasToolMode === "crop");
+
+  if (canvasToolMode === "resize") {
+    elements.resizeDetails.open = true;
+    updateResizeOverlay();
+  }
+  if (canvasToolMode === "crop") {
+    elements.cropDetails.open = true;
+    const values = cropValues();
+    if (values.x === 0 && values.y === 0 && values.width === baseCanvas.width && values.height === baseCanvas.height) {
+      const marginX = Math.max(1, Math.round(baseCanvas.width * .1));
+      const marginY = Math.max(1, Math.round(baseCanvas.height * .1));
+      setCropInputs(marginX, marginY, baseCanvas.width - marginX * 2, baseCanvas.height - marginY * 2);
+    }
+    updateCropOverlay();
+  }
+}
+
+function updateResizeOverlay(handle = "se") {
+  if (!fileInfo || canvasToolMode !== "resize") return;
+  const width = Math.round(clamp(elements.resizeWidth.value, 1, 12000));
+  const height = Math.round(clamp(elements.resizeHeight.value, 1, 12000));
+  const widthPercent = width / baseCanvas.width * 100;
+  const heightPercent = height / baseCanvas.height * 100;
+  elements.resizeOverlay.style.width = `${widthPercent}%`;
+  elements.resizeOverlay.style.height = `${heightPercent}%`;
+  elements.resizeOverlay.style.left = handle.includes("w") ? `${100 - widthPercent}%` : "0";
+  elements.resizeOverlay.style.top = handle.includes("n") ? `${100 - heightPercent}%` : "0";
+  elements.resizeOverlayLabel.textContent = `${width.toLocaleString()} × ${height.toLocaleString()} px`;
+}
+
+function setCropInputs(x, y, width, height) {
+  const safeX = Math.round(clamp(x, 0, Math.max(0, baseCanvas.width - 1)));
+  const safeY = Math.round(clamp(y, 0, Math.max(0, baseCanvas.height - 1)));
+  elements.cropX.value = safeX;
+  elements.cropY.value = safeY;
+  elements.cropWidth.value = Math.round(clamp(width, 1, baseCanvas.width - safeX));
+  elements.cropHeight.value = Math.round(clamp(height, 1, baseCanvas.height - safeY));
+  updateCropOverlay();
+}
+
+function canvasPoint(event) {
+  const bounds = elements.canvasStack.getBoundingClientRect();
+  return {
+    x: clamp((event.clientX - bounds.left) / bounds.width * baseCanvas.width, 0, baseCanvas.width),
+    y: clamp((event.clientY - bounds.top) / bounds.height * baseCanvas.height, 0, baseCanvas.height)
+  };
+}
+
+function beginCanvasToolDrag(event) {
+  if (!canvasToolMode || (event.pointerType === "mouse" && event.button !== 0)) return;
+  const resizeHandle = event.target.closest?.("[data-resize-handle]");
+  const cropHandle = event.target.closest?.("[data-crop-handle]");
+
+  if (canvasToolMode === "resize" && !resizeHandle) return;
+  event.preventDefault();
+  const startPoint = canvasPoint(event);
+
+  if (canvasToolMode === "resize") {
+    canvasToolDrag = {
+      pointerId: event.pointerId,
+      kind: "resize",
+      handle: resizeHandle.dataset.resizeHandle,
+      startPoint,
+      width: Number(elements.resizeWidth.value),
+      height: Number(elements.resizeHeight.value)
+    };
+  } else {
+    const current = cropValues();
+    const insideOverlay = event.target.closest?.("#cropOverlay");
+    canvasToolDrag = {
+      pointerId: event.pointerId,
+      kind: cropHandle ? "crop-resize" : insideOverlay ? "crop-move" : "crop-new",
+      handle: cropHandle?.dataset.cropHandle || "",
+      startPoint,
+      current
+    };
+    if (!insideOverlay) setCropInputs(startPoint.x, startPoint.y, 1, 1);
+  }
+
+  elements.canvasStack.setPointerCapture?.(event.pointerId);
+}
+
+function moveCanvasToolDrag(event) {
+  if (!canvasToolDrag || canvasToolDrag.pointerId !== event.pointerId) return;
+  event.preventDefault();
+  const point = canvasPoint(event);
+  const drag = canvasToolDrag;
+
+  if (drag.kind === "resize") {
+    const directionX = drag.handle.includes("w") ? -1 : 1;
+    const directionY = drag.handle.includes("n") ? -1 : 1;
+    let width = clamp(drag.width + (point.x - drag.startPoint.x) * directionX, 1, 12000);
+    let height = clamp(drag.height + (point.y - drag.startPoint.y) * directionY, 1, 12000);
+    if (ratioLocked) {
+      const widthChange = Math.abs(width / drag.width - 1);
+      const heightChange = Math.abs(height / drag.height - 1);
+      if (widthChange >= heightChange) height = width * baseCanvas.height / baseCanvas.width;
+      else width = height * baseCanvas.width / baseCanvas.height;
+    }
+    if (width * height > MAX_PIXELS) {
+      const safeScale = Math.sqrt(MAX_PIXELS / (width * height));
+      width *= safeScale;
+      height *= safeScale;
+    }
+    elements.resizeWidth.value = Math.max(1, Math.round(width));
+    elements.resizeHeight.value = Math.max(1, Math.round(height));
+    updateResizeOverlay(drag.handle);
+    return;
+  }
+
+  if (drag.kind === "crop-new") {
+    setCropInputs(
+      Math.min(drag.startPoint.x, point.x),
+      Math.min(drag.startPoint.y, point.y),
+      Math.max(1, Math.abs(point.x - drag.startPoint.x)),
+      Math.max(1, Math.abs(point.y - drag.startPoint.y))
+    );
+    return;
+  }
+
+  if (drag.kind === "crop-move") {
+    const dx = point.x - drag.startPoint.x;
+    const dy = point.y - drag.startPoint.y;
+    setCropInputs(
+      clamp(drag.current.x + dx, 0, baseCanvas.width - drag.current.width),
+      clamp(drag.current.y + dy, 0, baseCanvas.height - drag.current.height),
+      drag.current.width,
+      drag.current.height
+    );
+    return;
+  }
+
+  const left = drag.current.x;
+  const top = drag.current.y;
+  const right = left + drag.current.width;
+  const bottom = top + drag.current.height;
+  const anchorX = drag.handle.includes("w") ? right : left;
+  const anchorY = drag.handle.includes("n") ? bottom : top;
+  setCropInputs(
+    Math.min(anchorX, point.x),
+    Math.min(anchorY, point.y),
+    Math.max(1, Math.abs(point.x - anchorX)),
+    Math.max(1, Math.abs(point.y - anchorY))
+  );
+}
+
+function endCanvasToolDrag(event) {
+  if (!canvasToolDrag || canvasToolDrag.pointerId !== event.pointerId) return;
+  if (elements.canvasStack.hasPointerCapture?.(event.pointerId)) elements.canvasStack.releasePointerCapture(event.pointerId);
+  canvasToolDrag = null;
 }
 
 function syncResizeInputs() {
@@ -585,6 +779,7 @@ function applyCrop() {
   const output = createCanvas(width, height);
   output.getContext("2d", { alpha: true }).drawImage(baseCanvas, x, y, width, height, 0, 0, width, height);
   setBaseFromCanvas(output);
+  setCanvasToolMode(null);
   requestRender();
   showToast(`已裁切為 ${width} × ${height} px`);
 }
@@ -608,6 +803,7 @@ function applyResize() {
   context.imageSmoothingQuality = "high";
   context.drawImage(baseCanvas, 0, 0, width, height);
   setBaseFromCanvas(output);
+  setCanvasToolMode(null);
   requestRender();
   showToast(`尺寸已調整為 ${width} × ${height} px`);
 }
@@ -621,8 +817,10 @@ function updateFileUi() {
 }
 
 async function loadImageFile(file) {
-  if (!file || !file.type.startsWith("image/")) {
-    showToast("請選擇 PNG、JPG、WebP 或 GIF 影像");
+  const extension = String(file?.name || "").split(".").pop().toLowerCase();
+  const supportedExtension = ["png", "jpg", "jpeg", "bmp", "webp", "gif"].includes(extension);
+  if (!file || (!file.type.startsWith("image/") && !supportedExtension)) {
+    showToast("請選擇 PNG、JPG/JPEG、BMP、WebP 或 GIF 影像");
     return;
   }
   if (file.size > 40 * 1024 * 1024) {
@@ -653,10 +851,12 @@ async function loadImageFile(file) {
 
       copyCanvas(loaded, originalCanvas);
       copyCanvas(loaded, baseCanvas);
-      fileInfo = { name: file.name || "pasted-image.png", type: file.type || "image/png", size: file.size || 0 };
+      const detectedType = file.type || ({ jpg: "image/jpeg", jpeg: "image/jpeg", bmp: "image/bmp", png: "image/png", webp: "image/webp", gif: "image/gif" }[extension] || "image/png");
+      fileInfo = { name: file.name || "pasted-image.png", type: detectedType, size: file.size || 0 };
       undoStack.length = 0;
       redoStack.length = 0;
       resetSettings();
+      setCanvasToolMode(null);
       resetCropInputs();
       syncResizeInputs();
       updateFileUi();
@@ -806,6 +1006,7 @@ function bindEvents() {
 
   const transform = (callback, message) => {
     if (!fileInfo) return;
+    setCanvasToolMode(null);
     pushHistory();
     callback();
     requestRender();
@@ -824,16 +1025,31 @@ function bindEvents() {
   });
   elements.resizeWidth.addEventListener("input", () => {
     if (ratioLocked && baseCanvas.width) elements.resizeHeight.value = Math.max(1, Math.round(Number(elements.resizeWidth.value) * baseCanvas.height / baseCanvas.width));
+    updateResizeOverlay();
   });
   elements.resizeHeight.addEventListener("input", () => {
     if (ratioLocked && baseCanvas.height) elements.resizeWidth.value = Math.max(1, Math.round(Number(elements.resizeHeight.value) * baseCanvas.width / baseCanvas.height));
+    updateResizeOverlay();
   });
+  elements.toggleResizeDrag.addEventListener("click", () => setCanvasToolMode("resize"));
   elements.applyResize.addEventListener("click", applyResize);
 
   [elements.cropX, elements.cropY, elements.cropWidth, elements.cropHeight].forEach((input) => input.addEventListener("input", updateCropOverlay));
-  elements.cropDetails.addEventListener("toggle", updateCropOverlay);
+  elements.cropDetails.addEventListener("toggle", () => {
+    if (!elements.cropDetails.open && canvasToolMode === "crop") setCanvasToolMode(null);
+    updateCropOverlay();
+  });
+  elements.resizeDetails.addEventListener("toggle", () => {
+    if (!elements.resizeDetails.open && canvasToolMode === "resize") setCanvasToolMode(null);
+  });
+  elements.toggleCropDrag.addEventListener("click", () => setCanvasToolMode("crop"));
   elements.resetCrop.addEventListener("click", resetCropInputs);
   elements.applyCrop.addEventListener("click", applyCrop);
+
+  elements.canvasStack.addEventListener("pointerdown", beginCanvasToolDrag);
+  elements.canvasStack.addEventListener("pointermove", moveCanvasToolDrag);
+  elements.canvasStack.addEventListener("pointerup", endCanvasToolDrag);
+  elements.canvasStack.addEventListener("pointercancel", endCanvasToolDrag);
 
   elements.compareButton.addEventListener("click", () => {
     compareActive = !compareActive;
@@ -879,6 +1095,10 @@ function bindEvents() {
       redo();
       return;
     }
+    if (event.key === "Escape" && canvasToolMode) {
+      setCanvasToolMode(null);
+      return;
+    }
     if (!fileInfo || editable) return;
     if (event.key.toLowerCase() === "r") {
       event.preventDefault();
@@ -908,9 +1128,11 @@ function init() {
 window.ImageStudio = Object.freeze({
   hasImage: () => Boolean(fileInfo),
   getProcessedCanvas: () => elements.editCanvas,
-  commitCanvas: (source, message = "已套用 AI 影像處理") => {
+  commitCanvas: (source, message = "已套用 AI 影像處理", compareSource = null) => {
     if (!fileInfo || !(source instanceof HTMLCanvasElement)) return false;
     pushHistory();
+    hasComparisonOverride = compareSource instanceof HTMLCanvasElement;
+    if (hasComparisonOverride) copyCanvas(compareSource, comparisonOverrideCanvas);
     copyCanvas(source, baseCanvas);
     resetSettings();
     resetCropInputs();

@@ -1,0 +1,13 @@
+{
+  "name": "ai-image-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser-local image processing, color channel analysis, convolution filtering, PSNR, and face detection.",
+  "scripts": {
+    "start": "node offline-server.cjs --no-open",
+    "check": "node --check app.js && node --check advanced-tools.js && node --check face-analysis.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

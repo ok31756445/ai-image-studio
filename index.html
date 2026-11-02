@@ -49,12 +49,12 @@
               <div><h2>來源影像</h2></div>
             </div>
             <label class="upload-card" id="uploadCard" for="fileInput">
-              <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+              <input id="fileInput" type="file" accept="image/png,image/jpeg,image/bmp,.bmp,image/webp,image/gif" hidden>
               <span class="upload-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 14v5h14v-5"/></svg>
               </span>
               <strong>拖放或選擇影像</strong>
-              <small>PNG、JPG、WebP、GIF · 最大 32 MP</small>
+              <small>PNG、JPG/JPEG、BMP、WebP、GIF · 最大 32 MP</small>
             </label>
             <button class="text-button" id="sampleButton" type="button">沒有影像？載入示範圖</button>
           </section>
@@ -111,6 +111,30 @@
             </div>
           </section>
 
+          <section class="panel-section kernel-section" aria-labelledby="kernelTitle">
+            <div class="section-heading">
+              <div><h2 id="kernelTitle">自訂卷積濾波</h2></div>
+              <span class="live-badge" id="kernelStatus">尚未套用</span>
+            </div>
+            <p class="helper-text">輸入 3×3 或 5×5 權重，邊界採鏡像延伸。套用後可用前後對照檢查結果。</p>
+            <div class="kernel-toolbar">
+              <label class="compact-field"><span>矩陣尺寸</span><select id="kernelSize" disabled><option value="3">3 × 3</option><option value="5">5 × 5</option></select></label>
+              <label class="compact-field"><span>範例</span><select id="kernelPreset" disabled><option value="identity">原始</option><option value="sharpen">邊緣銳化</option><option value="gaussian">高斯平滑</option><option value="emboss">浮雕</option><option value="edge">邊緣偵測</option></select></label>
+            </div>
+            <div class="kernel-matrix" id="kernelMatrix" role="group" aria-label="卷積核矩陣"></div>
+            <div class="kernel-options">
+              <label class="compact-field"><span>正規化</span><select id="kernelNormalization" disabled><option value="sum">除以權重總和</option><option value="none">不正規化</option><option value="custom">自訂除數</option></select></label>
+              <label class="compact-field"><span>除數</span><input id="kernelDivisor" type="number" step="any" value="1" disabled></label>
+              <label class="compact-field"><span>偏移量</span><input id="kernelBias" type="number" step="any" value="0" disabled></label>
+            </div>
+            <button class="button button-ai full-width" id="applyKernel" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4h16v16H4V4Zm5 0v16M15 4v16M4 9h16M4 15h16"/></svg>
+              <span>套用卷積濾波</span>
+            </button>
+            <div class="kernel-progress" id="kernelProgress" hidden><span class="ai-spinner" aria-hidden="true"></span><span id="kernelProgressText" role="status">正在計算濾波…</span></div>
+            <div class="psnr-readout" aria-live="polite"><span>PSNR 品質指標</span><strong id="psnrValue">— dB</strong><small id="psnrNote">套用濾波後計算</small></div>
+          </section>
+
           <section class="panel-section" aria-labelledby="transformTitle">
             <div class="section-heading">
               <div><h2 id="transformTitle">方向與尺寸</h2></div>
@@ -125,6 +149,10 @@
             <details class="tool-details" id="resizeDetails">
               <summary>調整影像尺寸<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m8 10 4 4 4-4"/></svg></summary>
               <div class="details-body">
+                <button class="button button-quiet drag-mode-button full-width" id="toggleResizeDrag" type="button" aria-pressed="false" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5m13 5h5v-5M3 8l6-6m12 6-6-6M3 16l6 6m12-6-6 6"/></svg>
+                  在畫布拖曳四角
+                </button>
                 <div class="dimension-grid">
                   <label><span>寬度（px）</span><input id="resizeWidth" type="number" min="1" max="12000" disabled></label>
                   <button class="ratio-lock is-active" id="ratioLock" type="button" aria-pressed="true" disabled aria-label="鎖定長寬比" title="鎖定長寬比"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 12a4 4 0 0 0 6.2 3.3l2-2a4 4 0 0 0-5.6-5.6l-1.1 1M15 12a4 4 0 0 0-6.2-3.3l-2 2a4 4 0 0 0 5.6 5.6l1.1-1"/></svg></button>
@@ -137,7 +165,11 @@
             <details class="tool-details" id="cropDetails">
               <summary>精確裁切<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m8 10 4 4 4-4"/></svg></summary>
               <div class="details-body">
-                <p class="helper-text" id="cropHelp">輸入像素範圍，畫布會即時顯示裁切框。</p>
+                <button class="button button-quiet drag-mode-button full-width" id="toggleCropDrag" type="button" aria-pressed="false" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 2v14a2 2 0 0 0 2 2h14M2 6h14a2 2 0 0 1 2 2v14"/></svg>
+                  在畫布拖出裁切範圍
+                </button>
+                <p class="helper-text" id="cropHelp">輸入像素範圍，或直接在畫布拖曳裁切框。</p>
                 <div class="crop-grid">
                   <label><span>X</span><input id="cropX" type="number" min="0" value="0" disabled></label>
                   <label><span>Y</span><input id="cropY" type="number" min="0" value="0" disabled></label>
@@ -192,10 +224,18 @@
           <div class="canvas-frame" id="canvasFrame" hidden>
             <div class="canvas-stack" id="canvasStack">
               <canvas id="editCanvas" aria-label="處理後影像預覽"></canvas>
+              <canvas id="analysisCanvas" aria-label="色彩通道檢視" hidden></canvas>
               <canvas id="compareCanvas" aria-label="原始影像預覽"></canvas>
               <canvas id="faceOverlay" aria-label="人臉偵測標記圖層"></canvas>
               <div class="compare-divider" id="compareDivider" hidden aria-hidden="true"><span><svg viewBox="0 0 24 24" fill="none"><path d="m9 8-4 4 4 4m6-8 4 4-4 4"/></svg></span></div>
-              <div class="crop-overlay" id="cropOverlay" hidden aria-hidden="true"></div>
+              <div class="resize-overlay" id="resizeOverlay" hidden aria-hidden="true">
+                <i data-resize-handle="nw"></i><i data-resize-handle="ne"></i><i data-resize-handle="sw"></i><i data-resize-handle="se"></i>
+                <span id="resizeOverlayLabel">— × — px</span>
+              </div>
+              <div class="crop-overlay" id="cropOverlay" hidden aria-hidden="true">
+                <i data-crop-handle="nw"></i><i data-crop-handle="ne"></i><i data-crop-handle="sw"></i><i data-crop-handle="se"></i>
+                <span id="cropOverlayLabel">— × — px</span>
+              </div>
             </div>
           </div>
 
@@ -213,6 +253,23 @@
 
       <aside class="tool-panel tool-panel-right" aria-label="影像分析與匯出">
         <div class="panel-scroll">
+          <section class="panel-section channel-section" aria-labelledby="channelTitle">
+            <div class="section-heading">
+              <div><h2 id="channelTitle">色彩空間與通道</h2></div>
+              <span class="live-badge is-ready" id="channelStatus">Original</span>
+            </div>
+            <div class="channel-groups" id="channelModes" role="group" aria-label="影像通道檢視模式">
+              <button type="button" class="channel-mode is-active" data-channel="original" aria-pressed="true" disabled>Original</button>
+              <button type="button" class="channel-mode" data-channel="r" aria-pressed="false" disabled>R</button>
+              <button type="button" class="channel-mode" data-channel="g" aria-pressed="false" disabled>G</button>
+              <button type="button" class="channel-mode" data-channel="b" aria-pressed="false" disabled>B</button>
+              <button type="button" class="channel-mode" data-channel="y" aria-pressed="false" disabled>Y</button>
+              <button type="button" class="channel-mode" data-channel="u" aria-pressed="false" disabled>U</button>
+              <button type="button" class="channel-mode" data-channel="v" aria-pressed="false" disabled>V</button>
+            </div>
+            <p class="channel-description" id="channelDescription">完整 RGB 彩色影像；直方圖顯示亮度分布。</p>
+          </section>
+
           <section class="panel-section ai-section" aria-labelledby="faceAnalysisTitle">
             <div class="section-heading">
               <div><h2 id="faceAnalysisTitle">AI 人臉分析</h2></div>
@@ -279,11 +336,14 @@
               <canvas id="histogramCanvas" width="320" height="128" aria-label="影像亮度直方圖"></canvas>
               <div class="histogram-empty" id="histogramEmpty">載入影像後顯示</div>
             </div>
+            <div class="histogram-axis" aria-hidden="true"><span>0</span><span>像素強度</span><span>255</span></div>
             <dl class="image-stats">
               <div><dt>尺寸</dt><dd id="statDimensions">—</dd></div>
               <div><dt>像素</dt><dd id="statMegapixels">—</dd></div>
               <div><dt>格式</dt><dd id="statFormat">—</dd></div>
               <div><dt>檔案大小</dt><dd id="statSize">—</dd></div>
+              <div><dt>色彩維度</dt><dd id="statChannels">—</dd></div>
+              <div><dt>位元深度</dt><dd id="statBitDepth">—</dd></div>
             </dl>
           </section>
 
@@ -331,6 +391,7 @@
   <div class="sr-only" id="liveRegion" aria-live="polite"></div>
 
   <script src="app.js"></script>
+  <script src="advanced-tools.js"></script>
   <script src="face-analysis.js"></script>
 </body>
 </html>

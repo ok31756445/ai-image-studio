@@ -5,15 +5,21 @@ const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
 
-const HOST = "127.0.0.1";
-const PORT = 4173;
+const HOST = process.env.IMAGE_STUDIO_HOST || "127.0.0.1";
+const PORT = Number(process.env.PORT || 4173);
 const ROOT = path.resolve(__dirname);
 const SHOULD_OPEN_BROWSER = !process.argv.includes("--no-open");
 const MIME_TYPES = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
+  ".bmp": "image/bmp",
+  ".gif": "image/gif",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
   ".js": "text/javascript; charset=utf-8",
   ".mjs": "text/javascript; charset=utf-8",
+  ".png": "image/png",
+  ".webp": "image/webp",
   ".tflite": "application/octet-stream",
   ".wasm": "application/wasm"
 };
@@ -61,7 +67,7 @@ server.listen(PORT, HOST, () => {
   const url = `http://${HOST}:${PORT}`;
   console.log(`\nAI 光影研究室離線版已啟動：${url}`);
   console.log("使用完畢請回到此視窗按 Ctrl+C 停止。\n");
-  if (SHOULD_OPEN_BROWSER && process.platform === "win32") {
+  if (SHOULD_OPEN_BROWSER && process.platform === "win32" && HOST === "127.0.0.1") {
     execFile("cmd.exe", ["/c", "start", "", url], { windowsHide: true });
   }
 });
