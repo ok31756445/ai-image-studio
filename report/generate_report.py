@@ -300,16 +300,12 @@ def build_story():
     story += [table(rubric, [43 * mm, 18 * mm, 104 * mm]), Spacer(1, 9 * mm)]
     story += [p("結論", "H2ZH"), p("本專案以無伺服器影像上傳的方式完成四大核心功能，並將演算法驗證與直接操作整合在同一個工作台。Public Live Demo 與 Source Code 已部署並以公開網路驗證 HTTP 200；正式 PDF 檔名、學生資料與版本資訊均符合繳交規範。")]
     story += [p("主要檔案", "H2ZH")]
-    files = [
-        ["檔案", "職責"],
-        ["streamlit_app.py", "Streamlit Cloud 與本機執行入口"],
-        ["python_image_studio/workbench.py", "三欄 UI、狀態、圖表、卷積與下載互動"],
-        ["python_image_studio/core.py", "RGB/YUV、Histogram、Kernel、PSNR 與影像編碼"],
-        ["python_image_studio/face.py", "MediaPipe CPU 推論、框、關鍵點與信心度"],
-        ["requirements.txt / packages.txt", "Python 與 Linux 部署相依性"],
-        ["report/generate_report.py", "本 PDF 產生器"],
-    ]
-    story += [table(files, [58 * mm, 107 * mm])]
+    story += [p(
+        "streamlit_app.py：執行入口　｜　python_image_studio/workbench.py：三欄 UI 與互動<br/>"
+        "python_image_studio/core.py：RGB/YUV、Histogram、Kernel、PSNR　｜　python_image_studio/face.py：MediaPipe CPU 推論<br/>"
+        "requirements.txt／packages.txt：部署相依性　｜　report/generate_report.py：本 PDF 產生器",
+        "CodeZH",
+    )]
     return story
 
 
