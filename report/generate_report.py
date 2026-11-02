@@ -24,6 +24,8 @@ from reportlab.platypus import (
 ROOT = Path(__file__).resolve().parents[1]
 STUDENT_ID = "C112152350"
 STUDENT_NAME = "胡景翔"
+SOURCE_CODE_URL = "https://github.com/ok31756445/ai-image-studio"
+LIVE_DEMO_URL = "https://ok31756445.github.io/ai-image-studio/"
 OUTPUT = ROOT / "output" / "pdf" / f"{STUDENT_ID}_{STUDENT_NAME}_期中專題.pdf"
 SCREENSHOT = ROOT / "tmp" / "qa" / "report-ui.png"
 
@@ -139,14 +141,14 @@ def build_story():
     story = []
     story += [Spacer(1, 22 * mm), p("AI 光影研究室", "TitleZH"), Spacer(1, 4 * mm), p("基於瀏覽器本機運算之互動式影像處理、色彩分析、卷積濾波與人臉偵測工具", "SubtitleZH"), Spacer(1, 16 * mm)]
     cover_info = [
-        [p("報告狀態", "H3ZH"), p("功能與排版已完成；公開部署連結待補", "BodyZH")],
+        [p("報告狀態", "H3ZH"), p("正式繳交版；功能、排版與公開部署均已驗證", "BodyZH")],
         [p("學號／姓名", "H3ZH"), p(f"{STUDENT_ID}／{STUDENT_NAME}", "BodyZH")],
         [p("開發平台", "H3ZH"), p("HTML5 Canvas、JavaScript ES2022、Node.js 18+、MediaPipe Tasks Vision 1.2.0", "BodyZH")],
         [p("版本控制", "H3ZH"), p(f"Git；本報告依據 commit {git_head()} 產生", "BodyZH")],
         [p("產製日期", "H3ZH"), p("2026-11-02", "BodyZH")],
     ]
     story += [table(cover_info, [38 * mm, 125 * mm], header=False, font_size=9), Spacer(1, 18 * mm)]
-    story += [p("正式繳交前尚需補入：Public Live Demo URL 與 Public Source Code URL。正式檔名已依規範設定。", "CodeZH")]
+    story += [p(f"Public Live Demo：{LIVE_DEMO_URL}<br/>Public Source Code：{SOURCE_CODE_URL}", "CodeZH")]
     story += [PageBreak()]
 
     story += [p("目錄與驗收摘要", "ChapterZH")]
@@ -196,8 +198,8 @@ def build_story():
     story += [p("Chapter 2｜可執行連結", "ChapterZH")]
     links = [
         ["項目", "目前狀態", "正式繳交要求"],
-        ["Live Demo", "尚未提供公開 URL", "部署至 Hugging Face Spaces／其他公開 HTTPS 網址，確認免登入可開啟"],
-        ["Source Code", "尚未提供 GitHub／GitLab URL", "Public 儲存庫，包含 vendor、Dockerfile、README、完整原始碼"],
+        ["Live Demo", LIVE_DEMO_URL, "已以公開網路驗證 HTTP 200，免登入可開啟"],
+        ["Source Code", SOURCE_CODE_URL, "Public 儲存庫，包含 vendor、Dockerfile、README、完整原始碼"],
         ["本機執行", "已完成", "start-offline.cmd 或 npm start"],
         ["Docker", "已完成 Dockerfile", "Hugging Face Docker Space 使用 7860 port"],
         ["GitHub Pages", "工作流已完成", "推送 main 後先執行 npm check／test，再自動部署"],
@@ -292,7 +294,7 @@ def build_story():
         ["介面與 UX", "10%", "拖曳＋數字替代、44 px 命中區、除零／尺寸／像素上限防呆"],
     ]
     story += [table(rubric, [43 * mm, 18 * mm, 104 * mm]), Spacer(1, 9 * mm)]
-    story += [p("結論", "H2ZH"), p("本專案以無伺服器影像上傳的方式完成四大核心功能，並將演算法驗證與直接操作整合在同一個工作台。正式繳交前只需補上公開 Live Demo 與 Source Code URL，重新產生 PDF 並以 Public／無痕環境完成最終驗收。")]
+    story += [p("結論", "H2ZH"), p("本專案以無伺服器影像上傳的方式完成四大核心功能，並將演算法驗證與直接操作整合在同一個工作台。Public Live Demo 與 Source Code 已部署並以公開網路驗證 HTTP 200；正式 PDF 檔名、學生資料與版本資訊均符合繳交規範。")]
     story += [p("主要檔案", "H2ZH")]
     files = [
         ["檔案", "職責"],
