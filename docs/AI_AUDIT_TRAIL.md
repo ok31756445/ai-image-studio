@@ -30,6 +30,7 @@ AI 模型：OpenAI Codex（GPT-5 系列）。以下依本專案對話順序保�
 | 24 | 雲端人臉偵測接著顯示 `libEGL.so.1` 缺失 | 完整 Log 證實 GL 已安裝，但 MediaPipe 原生層仍載入 EGL/GLES | 補上 `libegl1`、`libgles2`，並明確指定 MediaPipe CPU delegate |
 | 25 | Python UI 改成與原本 JavaScript 版一致 | 以原版實際畫面與 CSS token 為基準重建 Streamlit 工作台 | 改為固定頂欄、左右工具面板、中央點陣畫布；保留響應式堆疊、焦點狀態與拖曳比較的鍵盤替代操作 |
 | 26 | 依最終核心功能、繳交規範與 Rubric 再次驗收 | 對照 Python 程式、測試、公開部署與 PDF 報告逐項稽核 | 修正 5×5 identity 預設、加入內容雜湊狀態隔離與逐臉明細；補 U/V、自訂除數、5×5 測試，將正式報告全面改寫為 Python／Streamlit 架構 |
+| 27 | 左側工具列收起後無法重新打開 | 發現自訂頂欄 CSS 同時隱藏 Streamlit 原生展開控制 | 保留原生可存取按鈕並重新定位於頂欄下方；實測「收起 → 展開」及鍵盤可見焦點狀態 |
 
 ## 驗證方式
 

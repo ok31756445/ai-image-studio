@@ -57,7 +57,16 @@ APP_CSS = """
 }
 html, body, [class*="css"] { font-family:"Segoe UI Variable","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif; }
 .stApp { color:var(--text); background:var(--bg); }
-[data-testid="stHeader"], [data-testid="stToolbar"], footer { display:none !important; }
+[data-testid="stHeader"] { display:block !important; min-height:68px; height:68px; background:transparent !important; pointer-events:none; }
+[data-testid="stToolbar"] { display:flex !important; min-height:68px; height:68px; background:transparent !important; pointer-events:none; }
+[data-testid="stToolbar"] > div { visibility:hidden; }
+[data-testid="stExpandSidebarButton"] { position:fixed !important; top:78px; left:12px; z-index:1002;
+  width:44px; height:44px; visibility:visible !important; pointer-events:auto; border:1px solid var(--line-strong) !important;
+  border-radius:9px !important; color:var(--text) !important; background:var(--raised) !important;
+  box-shadow:0 8px 24px rgba(0,0,0,.28); }
+[data-testid="stExpandSidebarButton"]:hover { border-color:var(--accent) !important; color:var(--accent) !important; background:var(--hover) !important; }
+[data-testid="stExpandSidebarButton"]:focus-visible { outline:2px solid var(--focus) !important; outline-offset:2px; }
+footer { display:none !important; }
 .block-container { max-width:none; padding:84px 16px 18px; }
 [data-testid="stSidebar"] { top:68px; height:calc(100dvh - 68px); background:var(--surface); border-right:1px solid var(--line); }
 [data-testid="stSidebar"] > div:first-child { padding-top:14px; }
@@ -153,6 +162,8 @@ div[data-testid="stColumn"]:has(.analysis-anchor) { padding:4px 16px 18px; borde
   .session-status { display:none; } .header-runtime { font-size:0; } .header-runtime::after { content:"Python"; font-size:10px; }
   [data-testid="stSidebar"] { top:62px; height:calc(100dvh - 62px); }
   .block-container { padding:76px 10px 16px; }
+  [data-testid="stHeader"], [data-testid="stToolbar"] { min-height:62px; height:62px; }
+  [data-testid="stExpandSidebarButton"] { top:70px; left:10px; }
   div[data-testid="stColumn"]:has(.stage-anchor), div[data-testid="stColumn"]:has(.analysis-anchor) { min-height:auto; }
   .stage-footer { flex-direction:column; }
 }
