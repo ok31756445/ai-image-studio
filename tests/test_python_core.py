@@ -57,6 +57,28 @@ class PythonImageAlgorithmsTest(unittest.TestCase):
         result = apply_convolution(self.image, validate_kernel(weights, "權重總和"))
         np.testing.assert_array_equal(result, self.image)
 
+    def test_rectangular_odd_kernel(self):
+        weights = np.zeros((3, 7), dtype=float)
+        weights[1, 3] = 1
+        spec = validate_kernel(weights, "權重總和")
+        result = apply_convolution(self.image, spec)
+        np.testing.assert_array_equal(result, self.image)
+
+    def test_larger_odd_kernel(self):
+        weights = np.zeros((9, 9), dtype=float)
+        weights[4, 4] = 1
+        spec = validate_kernel(weights, "權重總和")
+        result = apply_convolution(self.image, spec)
+        np.testing.assert_array_equal(result, self.image)
+
+    def test_even_kernel_dimension_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, "奇數"):
+            validate_kernel(np.ones((4, 3)), "權重總和")
+
+    def test_kernel_dimension_limit(self):
+        with self.assertRaisesRegex(ValueError, "不可超過 31"):
+            validate_kernel(np.ones((33, 3)), "權重總和")
+
     def test_custom_divisor(self):
         spec = validate_kernel(np.ones((3, 3)), "自訂除數", custom_divisor=9)
         result = apply_convolution(self.image, spec)

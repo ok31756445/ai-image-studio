@@ -6,6 +6,7 @@ import base64
 import hashlib
 from html import escape
 from io import BytesIO
+from math import comb
 from pathlib import Path
 
 import numpy as np
@@ -198,13 +199,23 @@ def _rule() -> None:
     st.markdown('<div class="panel-rule" aria-hidden="true"></div>', unsafe_allow_html=True)
 
 
-def _preset_matrix(name: str, size: int) -> list[list[float]]:
-    if size in PRESETS.get(name, {}):
-        return PRESETS[name][size]
+def _preset_matrix(name: str, rows: int, columns: int | None = None) -> list[list[float]]:
+    columns = rows if columns is None else columns
+    output = np.zeros((rows, columns), dtype=float)
+    if name == "原始":
+        output[rows // 2, columns // 2] = 1
+        return output.tolist()
+    if name == "高斯平滑":
+        row_weights = np.asarray([comb(rows - 1, index) for index in range(rows)], dtype=float)
+        column_weights = np.asarray([comb(columns - 1, index) for index in range(columns)], dtype=float)
+        return np.outer(row_weights, column_weights).tolist()
     base = np.asarray(PRESETS[name][3], dtype=float)
-    output = np.zeros((size, size), dtype=float)
-    offset = (size - 3) // 2
-    output[offset : offset + 3, offset : offset + 3] = base
+    if rows < 3 or columns < 3:
+        output[rows // 2, columns // 2] = base[1, 1]
+        return output.tolist()
+    row_offset = (rows - 3) // 2
+    column_offset = (columns - 3) // 2
+    output[row_offset : row_offset + 3, column_offset : column_offset + 3] = base
     return output.tolist()
 
 
@@ -374,10 +385,22 @@ def run_workbench() -> None:
     with st.sidebar:
         _rule()
         _heading("自訂卷積濾波", "已套用" if "filtered" in st.session_state else "尚未套用")
-        st.markdown('<p class="panel-copy">輸入 3×3 或 5×5 權重；邊界採 clamp-to-edge 延伸。</p>', unsafe_allow_html=True)
-        size = st.segmented_control("矩陣尺寸", [3, 5], default=3, format_func=lambda value: f"{value} × {value}", width="stretch")
+        st.markdown('<p class="panel-copy">設定 1–31 的奇數列／欄，可建立方形或矩形卷積核；邊界採 clamp-to-edge 延伸。</p>', unsafe_allow_html=True)
+        row_control, column_control = st.columns(2)
+        with row_control:
+            kernel_rows = int(st.number_input("列數", min_value=1, max_value=31, value=3, step=2, help="必須是 1–31 的奇數"))
+        with column_control:
+            kernel_columns = int(st.number_input("欄數", min_value=1, max_value=31, value=3, step=2, help="必須是 1–31 的奇數"))
         preset = st.selectbox("範例", list(PRESETS))
-        matrix = st.data_editor(pd.DataFrame(_preset_matrix(preset, size)), key=f"kernel:{size}:{preset}", hide_index=True, width="stretch", num_rows="fixed")
+        st.caption(f"{kernel_rows} × {kernel_columns} · {kernel_rows * kernel_columns} 個權重；大型矩陣會自動降低影像像素上限")
+        matrix = st.data_editor(
+            pd.DataFrame(_preset_matrix(preset, kernel_rows, kernel_columns)),
+            key=f"kernel:{kernel_rows}:{kernel_columns}:{preset}",
+            hide_index=True,
+            width="stretch",
+            height=min(420, 38 + kernel_rows * 35),
+            num_rows="fixed",
+        )
         normalization = st.selectbox("正規化", ["權重總和", "不正規化", "自訂除數"])
         custom_divisor = st.number_input("自訂除數", value=1.0, disabled=normalization != "自訂除數")
         bias = st.number_input("偏移量", value=0.0)

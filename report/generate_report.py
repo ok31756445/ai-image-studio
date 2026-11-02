@@ -119,7 +119,7 @@ def architecture_diagram():
     rows = [
         [p("Streamlit 輸入／狀態", "TableHeadZH"), p("Python 運算核心", "TableHeadZH"), p("分析與輸出", "TableHeadZH")],
         [p("PNG / JPG / BMP<br/>拖放、選檔", "SmallZH"), p("Pillow 解碼<br/>NumPy RGB 陣列", "SmallZH"), p("通道圖／直方圖<br/>PNG 下載", "SmallZH")],
-        [p("中繼資訊<br/>尺寸、格式、大小", "SmallZH"), p("3×3／5×5 卷積<br/>正規化、偏移", "SmallZH"), p("PSNR／MSE<br/>前後滑桿比較", "SmallZH")],
+        [p("中繼資訊<br/>尺寸、格式、大小", "SmallZH"), p("1–31 奇數列／欄<br/>正規化、偏移", "SmallZH"), p("PSNR／MSE<br/>前後滑桿比較", "SmallZH")],
         [p("Session State<br/>切換即清除舊結果", "SmallZH"), p("MediaPipe Face Detector<br/>CPU + BlazeFace", "SmallZH"), p("邊界框、總數<br/>逐臉信心度", "SmallZH")],
     ]
     diagram = Table(rows, colWidths=[52 * mm, 62 * mm, 52 * mm], rowHeights=[12 * mm, 22 * mm, 22 * mm, 24 * mm])
@@ -164,7 +164,7 @@ def build_story():
     for item in [
         "已完成 PNG、JPG/JPEG、BMP 讀取、即時顯示與中繼資訊解析。",
         "已完成 Original、R/G/B、Y/U/V 通道檢視與同步 0–255 強度直方圖。",
-        "已完成 3×3／5×5 任意卷積核、三種正規化模式、偏移量、PSNR 與前後對比。",
+        "已完成 1–31 奇數列／欄的方形或矩形卷積核、三種正規化模式、偏移量、PSNR 與前後對比。",
         "已完成 MediaPipe 多人臉框、總數、逐臉信心分數與 6 組臉部關鍵點。",
         "已完成內容雜湊狀態隔離；換圖或清除結果時同步移除 PSNR 與舊人臉結果。",
     ]:
@@ -234,7 +234,7 @@ def build_story():
     story += [p("Original 模式以 BT.709 亮度計算直方圖；R/G/B 模式將指定頻道映射為灰階；Y/U/V 採 BT.601 轉換，U、V 加 128 偏移以落在 0–255。每次切換都以完整非透明 RGBA 像素重算 256 個 bins，橫軸為 0–255 強度，縱軸為實際像素數量。")]
     story += [p("Y = 0.299R + 0.587G + 0.114B<br/>U = -0.168736R - 0.331264G + 0.5B + 128<br/>V = 0.5R - 0.418688G - 0.081312B + 128", "CodeZH")]
     story += [p("3.4 功能 3：自訂卷積與 PSNR", "H2ZH")]
-    story += [p("矩陣支援 3×3、5×5 與任意有限數值。預設含原始、銳化、高斯、浮雕、邊緣偵測。正規化可選權重總和、不正規化、自訂除數，並提供 bias。零和核搭配權重總和時會攔截除以零。卷積採 clamp-to-edge；大於 1,200 萬像素時要求先縮圖，避免主執行緒失去回應。")]
+    story += [p("矩陣列數與欄數可分別設定為 1–31 的奇數，因此支援 3×7 等矩形核及任意有限權重。預設含原始、銳化、高斯、浮雕、邊緣偵測。正規化可選權重總和、不正規化、自訂除數，並提供 bias。零和核搭配權重總和時會攔截除以零。卷積採 clamp-to-edge；大型矩陣依權重數量降低可處理像素上限，避免工作階段失去回應。")]
     story += [p("MSE = (1 / 3WH) Σ[(R-R')² + (G-G')² + (B-B')²]<br/>PSNR = 10 log10(255² / MSE) dB", "CodeZH")]
     story += [p("PSNR 越高表示濾波結果越接近輸入。MSE=0 時兩者完全相同，PSNR 定義為無限大。套用後工具自動開啟前後對照，可拖曳中央分隔線觀察局部差異。")]
     story += [PageBreak()]
@@ -249,7 +249,7 @@ def build_story():
         ["格式", "PNG、JPEG、BMP", "可解碼、即時顯示、格式與大小正確"],
         ["通道", "切換 R/G/B/Y/U/V", "畫面與直方圖同步；bins 範圍 0–255"],
         ["零和卷積", "Edge kernel + sum normalization", "阻止除以零並提示改用 none/custom"],
-        ["極端尺寸", ">32 MP 或卷積 >12 MP", "拒絕並要求先縮小，介面不凍結"],
+        ["極端尺寸", ">32 MP 或大型核超過動態上限", "拒絕並提示縮圖／縮小矩陣"],
         ["Identity kernel", "中心 1、其他 0", "MSE=0、PSNR=∞ dB"],
         ["多人臉", "同圖 2 人以上", "每張臉都有框與信心，總數正確"],
         ["無人臉", "風景／物件", "結果為 0，不產生殘留框"],
@@ -291,7 +291,7 @@ def build_story():
     story += [p("評分標準對照與結論", "ChapterZH")]
     rubric = [
         ["Rubric", "權重", "本專案證據"],
-        ["功能完整性與正確性", "35%", "格式／RGB-YUV／完整像素 Histogram／Kernel／PSNR／Face；8 項 Python 測試通過"],
+        ["功能完整性與正確性", "35%", "格式／RGB-YUV／Histogram／任意奇數 Kernel／PSNR／Face；14 項 Python 測試通過"],
         ["可執行與部署", "20%", "Public GitHub、Streamlit Live Demo、requirements.txt、packages.txt"],
         ["AI Prompt Log", "20%", "Chapter 4 依時序記錄 Prompt、產出與 Refinement"],
         ["技術報告與排版", "15%", "架構圖、操作、公式、截圖、測試、頁首頁尾與頁碼"],

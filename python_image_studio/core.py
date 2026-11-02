@@ -14,6 +14,7 @@ NormalizationMode = Literal["權重總和", "不正規化", "自訂除數"]
 
 MAX_IMAGE_PIXELS = 32_000_000
 MAX_CONVOLUTION_PIXELS = 12_000_000
+MAX_KERNEL_DIMENSION = 31
 
 
 @dataclass(frozen=True)
@@ -102,8 +103,13 @@ def validate_kernel(
     bias: float = 0.0,
 ) -> KernelSpec:
     weights = np.asarray(matrix, dtype=np.float64)
-    if weights.shape not in {(3, 3), (5, 5)}:
-        raise ValueError("卷積核必須是 3×3 或 5×5 方陣")
+    if weights.ndim != 2 or not weights.size:
+        raise ValueError("卷積核必須是非空白二維矩陣")
+    rows, columns = weights.shape
+    if rows > MAX_KERNEL_DIMENSION or columns > MAX_KERNEL_DIMENSION:
+        raise ValueError(f"卷積核列數與欄數不可超過 {MAX_KERNEL_DIMENSION}")
+    if rows % 2 == 0 or columns % 2 == 0:
+        raise ValueError("卷積核列數與欄數必須是奇數，才能確定中心錨點")
     if not np.isfinite(weights).all():
         raise ValueError("卷積核必須全部是有限數值")
     if normalization == "權重總和":
@@ -125,13 +131,28 @@ def validate_kernel(
 def apply_convolution(image: Image.Image | np.ndarray, kernel: KernelSpec) -> np.ndarray:
     rgb = ensure_rgb(image)
     height, width = rgb.shape[:2]
-    if height * width > MAX_CONVOLUTION_PIXELS:
-        raise ValueError("卷積上限為 1,200 萬像素；請先縮小影像")
-    radius = kernel.weights.shape[0] // 2
+    # Keep the 3×3 workload as the baseline and lower the image limit as the
+    # number of kernel coefficients grows. This prevents large custom kernels
+    # from locking up a Streamlit worker while preserving exact convolution.
+    pixel_limit = min(
+        MAX_CONVOLUTION_PIXELS,
+        max(1, MAX_CONVOLUTION_PIXELS * 9 // kernel.weights.size),
+    )
+    if height * width > pixel_limit:
+        rows, columns = kernel.weights.shape
+        raise ValueError(
+            f"{rows}×{columns} 卷積核最多處理 {pixel_limit:,} 像素；請先縮小影像或改用較小矩陣"
+        )
+    row_radius = kernel.weights.shape[0] // 2
+    column_radius = kernel.weights.shape[1] // 2
     # float32 keeps a 12 MP convolution within a practical memory budget while
     # still providing more than enough precision for an 8-bit output image.
     source = rgb.astype(np.float32)
-    padded = np.pad(source, ((radius, radius), (radius, radius), (0, 0)), mode="edge")
+    padded = np.pad(
+        source,
+        ((row_radius, row_radius), (column_radius, column_radius), (0, 0)),
+        mode="edge",
+    )
     output = np.zeros_like(source)
     for row in range(kernel.weights.shape[0]):
         for column in range(kernel.weights.shape[1]):
