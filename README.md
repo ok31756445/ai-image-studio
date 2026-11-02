@@ -7,7 +7,7 @@
 - PNG、JPG/JPEG、BMP、WebP、GIF 拖放、檔案選擇與剪貼簿貼上
 - 即時顯示解析度、百萬像素、格式、檔案大小、RGBA 色彩維度與位元深度
 - Original、RGB 分離通道與 YUV（Y/U/V）分量檢視
-- 通道切換時同步更新 0–255 像素強度／像素數量直方圖
+- 通道切換時以完整非透明像素同步更新 0–255 像素強度／像素數量直方圖
 - 3×3、5×5 自訂卷積核、正規化除數、偏移量與常用濾波預設
 - 卷積前後滑桿對照與 PSNR／MSE 即時計算
 - 亮度、對比、飽和度、色溫、模糊、灰階、復古濾鏡
@@ -57,7 +57,18 @@ PSNR 以 RGB 三通道計算：
 - Docker / Hugging Face Spaces：以專案內的 `Dockerfile` 建置；容器使用 `7860` 連接埠。
 - 純靜態代管：亦可部署至 GitHub Pages，但需確保 `vendor/mediapipe/` 完整上傳。
 
+專案已包含 `.github/workflows/pages.yml`。推送至 GitHub 後，在儲存庫 **Settings → Pages → Source** 選擇 **GitHub Actions**，後續每次推送 `main` 都會先執行語法與演算法測試，再自動部署。
+
 主應用程式不需要 npm 或 Python 第三方套件。`requirements.txt` 僅列出產生專題 PDF 報告的工具依賴。
+
+## 驗證
+
+```powershell
+npm run check
+npm test
+```
+
+自動化測試涵蓋 BT.601 YUV、RGB 通道、完整像素直方圖、MSE／PSNR 公式、零和卷積核與自訂除數。完整 AI 協作紀錄見 `docs/AI_AUDIT_TRAIL.md`。
 
 ## 測試邊界
 

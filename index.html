@@ -116,7 +116,7 @@
               <div><h2 id="kernelTitle">自訂卷積濾波</h2></div>
               <span class="live-badge" id="kernelStatus">尚未套用</span>
             </div>
-            <p class="helper-text">輸入 3×3 或 5×5 權重，邊界採鏡像延伸。套用後可用前後對照檢查結果。</p>
+            <p class="helper-text">輸入 3×3 或 5×5 權重，邊界採邊緣值延伸（clamp-to-edge）。套用後可用前後對照檢查結果。</p>
             <div class="kernel-toolbar">
               <label class="compact-field"><span>矩陣尺寸</span><select id="kernelSize" disabled><option value="3">3 × 3</option><option value="5">5 × 5</option></select></label>
               <label class="compact-field"><span>範例</span><select id="kernelPreset" disabled><option value="identity">原始</option><option value="sharpen">邊緣銳化</option><option value="gaussian">高斯平滑</option><option value="emboss">浮雕</option><option value="edge">邊緣偵測</option></select></label>
@@ -336,7 +336,7 @@
               <canvas id="histogramCanvas" width="320" height="128" aria-label="影像亮度直方圖"></canvas>
               <div class="histogram-empty" id="histogramEmpty">載入影像後顯示</div>
             </div>
-            <div class="histogram-axis" aria-hidden="true"><span>0</span><span>像素強度</span><span>255</span></div>
+            <div class="histogram-axis" aria-hidden="true"><span>0</span><span>像素強度（0–255）</span><span>255</span></div>
             <dl class="image-stats">
               <div><dt>尺寸</dt><dd id="statDimensions">—</dd></div>
               <div><dt>像素</dt><dd id="statMegapixels">—</dd></div>
@@ -390,6 +390,7 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <div class="sr-only" id="liveRegion" aria-live="polite"></div>
 
+  <script src="image-algorithms.js"></script>
   <script src="app.js"></script>
   <script src="advanced-tools.js"></script>
   <script src="face-analysis.js"></script>

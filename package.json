@@ -5,7 +5,8 @@
   "description": "Browser-local image processing, color channel analysis, convolution filtering, PSNR, and face detection.",
   "scripts": {
     "start": "node offline-server.cjs --no-open",
-    "check": "node --check app.js && node --check advanced-tools.js && node --check face-analysis.js"
+    "check": "node --check image-algorithms.js && node --check app.js && node --check advanced-tools.js && node --check face-analysis.js",
+    "test": "node --test tests/*.test.cjs"
   },
   "engines": {
     "node": ">=18"

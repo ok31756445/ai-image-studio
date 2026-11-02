@@ -1,6 +1,8 @@
 "use strict";
 
 (() => {
+  const algorithms = window.ImageAlgorithms;
+  if (!algorithms) throw new Error("ImageAlgorithms 尚未載入");
   const $ = (selector) => document.querySelector(selector);
   const $$ = (selector) => [...document.querySelectorAll(selector)];
   const studio = window.ImageStudio;
@@ -50,22 +52,9 @@
   let channelMode = "original";
   let kernelRunning = false;
   let evaluationRevision = 0;
+  let analysisRenderTimer = 0;
 
-  function clampByte(value) {
-    return Math.max(0, Math.min(255, Math.round(value)));
-  }
-
-  function channelValue(mode, red, green, blue) {
-    switch (mode) {
-      case "r": return red;
-      case "g": return green;
-      case "b": return blue;
-      case "y": return clampByte(.299 * red + .587 * green + .114 * blue);
-      case "u": return clampByte(-.168736 * red - .331264 * green + .5 * blue + 128);
-      case "v": return clampByte(.5 * red - .418688 * green - .081312 * blue + 128);
-      default: return clampByte(.2126 * red + .7152 * green + .0722 * blue);
-    }
-  }
+  const { clampByte, channelValue } = algorithms;
 
   function createWorkingCanvas(source, maxPixels = 4_000_000) {
     const scale = Math.min(1, Math.sqrt(maxPixels / (source.width * source.height)));
@@ -106,47 +95,55 @@
   }
 
   function drawSynchronizedHistogram(source) {
-    const sample = createWorkingCanvas(source, 90_000);
-    const sampleContext = sample.getContext("2d", { willReadFrequently: true });
-    const pixels = sampleContext.getImageData(0, 0, sample.width, sample.height).data;
-    const bins = new Uint32Array(256);
-    for (let index = 0; index < pixels.length; index += 4) {
-      if (!pixels[index + 3]) continue;
-      bins[channelValue(channelMode, pixels[index], pixels[index + 1], pixels[index + 2])] += 1;
-    }
+    const sourceContext = source.getContext("2d", { willReadFrequently: true });
+    const pixels = sourceContext.getImageData(0, 0, source.width, source.height).data;
+    const { bins, pixelCount } = algorithms.histogramFromRgba(pixels, channelMode);
 
     const canvas = elements.histogramCanvas;
     const context = canvas.getContext("2d");
     const width = canvas.width;
     const height = canvas.height;
-    const chartBottom = height - 17;
-    const chartTop = 9;
+    const chartLeft = 37;
+    const chartRight = width - 4;
+    const chartBottom = height - 18;
+    const chartTop = 10;
+    const chartWidth = chartRight - chartLeft;
     const max = Math.max(...bins) || 1;
     context.clearRect(0, 0, width, height);
     context.strokeStyle = "rgba(127, 140, 150, .18)";
     context.lineWidth = 1;
     [0, .25, .5, .75, 1].forEach((ratio) => {
-      const x = Math.round(ratio * (width - 1)) + .5;
+      const x = Math.round(chartLeft + ratio * chartWidth) + .5;
       context.beginPath(); context.moveTo(x, chartTop); context.lineTo(x, chartBottom); context.stroke();
     });
     context.beginPath();
-    context.moveTo(0, chartBottom);
+    context.moveTo(chartLeft, chartBottom);
     bins.forEach((count, index) => {
-      const x = index / 255 * width;
+      const x = chartLeft + index / 255 * chartWidth;
       const y = chartBottom - count / max * (chartBottom - chartTop);
       context.lineTo(x, y);
     });
-    context.lineTo(width, chartBottom);
+    context.lineTo(chartRight, chartBottom);
     context.closePath();
-    const gradient = context.createLinearGradient(0, 0, width, 0);
+    const gradient = context.createLinearGradient(chartLeft, 0, chartRight, 0);
     const color = CHANNELS[channelMode].color;
     gradient.addColorStop(0, `${color}44`);
     gradient.addColorStop(1, `${color}dd`);
     context.fillStyle = gradient;
     context.fill();
-    context.fillStyle = "rgba(183, 192, 199, .85)";
-    context.font = "10px Segoe UI";
-    context.fillText(`max ${max.toLocaleString()} px`, 7, 12);
+    context.fillStyle = "rgba(183, 192, 199, .9)";
+    context.font = "9px Segoe UI";
+    context.textAlign = "right";
+    context.fillText(max.toLocaleString(), chartLeft - 5, chartTop + 3);
+    context.fillText("0", chartLeft - 5, chartBottom);
+    context.save();
+    context.translate(9, (chartTop + chartBottom) / 2);
+    context.rotate(-Math.PI / 2);
+    context.textAlign = "center";
+    context.fillText("像素數量", 0, 0);
+    context.restore();
+    context.textAlign = "left";
+    canvas.setAttribute("aria-label", `${CHANNELS[channelMode].label} 直方圖；橫軸像素強度 0 到 255，縱軸像素數量，統計 ${pixelCount.toLocaleString()} 個非透明像素`);
     elements.histogramEmpty.hidden = true;
     elements.analysisStatus.textContent = CHANNELS[channelMode].label;
     elements.analysisStatus.classList.add("is-ready");
@@ -163,6 +160,11 @@
     elements.channelStatus.textContent = CHANNELS[mode].label;
     elements.channelDescription.textContent = CHANNELS[mode].description;
     renderChannelView();
+  }
+
+  function scheduleChannelRender() {
+    window.clearTimeout(analysisRenderTimer);
+    analysisRenderTimer = window.setTimeout(renderChannelView, 90);
   }
 
   function centeredPreset(values, size) {
@@ -215,23 +217,18 @@
   function resolveKernel() {
     const size = Number(elements.kernelSize.value);
     const weights = matrixValues();
-    if (weights.length !== size * size || weights.some((value) => !Number.isFinite(value))) {
-      studio.notify("卷積核必須全部填入有效數字");
+    const result = algorithms.validateKernel({
+      size,
+      weights,
+      normalization: elements.kernelNormalization.value,
+      customDivisor: elements.kernelDivisor.value,
+      bias: elements.kernelBias.value
+    });
+    if (!result.ok) {
+      studio.notify(result.error);
       return null;
     }
-    let divisor = 1;
-    if (elements.kernelNormalization.value === "sum") divisor = weights.reduce((sum, value) => sum + value, 0);
-    if (elements.kernelNormalization.value === "custom") divisor = Number(elements.kernelDivisor.value);
-    if (!Number.isFinite(divisor) || Math.abs(divisor) < 1e-12) {
-      studio.notify("正規化除數不可為 0；零和卷積核請改用「不正規化」或自訂非零除數");
-      return null;
-    }
-    const bias = Number(elements.kernelBias.value);
-    if (!Number.isFinite(bias)) {
-      studio.notify("偏移量必須是有效數字");
-      return null;
-    }
-    return { size, weights, divisor, bias };
+    return result.kernel;
   }
 
   async function convolve(source, kernel, isCancelled) {
@@ -280,8 +277,7 @@
     canvas.width = width;
     canvas.height = height;
     canvas.getContext("2d", { alpha: true }).putImageData(output, 0, 0);
-    const mse = squaredError / (width * height * 3);
-    const psnr = mse === 0 ? Infinity : 10 * Math.log10((255 * 255) / mse);
+    const { mse, psnr } = algorithms.psnrFromSquaredError(squaredError, width * height);
     return { canvas, psnr, mse };
   }
 
@@ -347,7 +343,7 @@
   elements.kernelMatrix.addEventListener("input", syncNormalization);
   elements.applyKernel.addEventListener("click", applyKernel);
   window.addEventListener("image-studio:render", () => {
-    renderChannelView();
+    scheduleChannelRender();
     $$(".kernel-cell").forEach((input) => { input.disabled = !studio.hasImage() || kernelRunning; });
     syncNormalization();
   });
