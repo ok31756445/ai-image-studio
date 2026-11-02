@@ -25,6 +25,7 @@ AI 模型：OpenAI Codex（GPT-5 系列）。以下依本專案對話順序保�
 | 19 | 依評分表檢查專案 | 實際驗收四大功能、部署、Prompt Log、PDF 與 UX | 找出公開連結、精確直方圖、正向人臉案例、完整 Prompt Log 等缺口 |
 | 20 | 開始修正 | 將直方圖改為完整像素統計並加入測試與 Pages 工作流 | 補 PDF 驗收證據；公開 URL、學號與姓名留待使用者提供 |
 | 21 | 我想改以 Python 去開發 | 將主版本移植為 Streamlit、NumPy、Pillow、MediaPipe Python，保留舊版作 Git 備份 | 實測發現 MediaPipe 無法開啟中文路徑模型，改以模型位元組載入；新增拖曳前後比較、深色主題與 Python CI 測試 |
+| 22 | Streamlit Cloud 人臉偵測顯示 `libGL.so.1` 缺失 | 判定為 Linux 系統層缺少 OpenCV 圖形執行期 | 新增 `packages.txt` 安裝 `libgl1` 與 `libglib2.0-0`，由 Community Cloud 重建環境 |
 
 ## 驗證方式
 
