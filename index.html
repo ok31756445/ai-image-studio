@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="基於 AI 輔助的互動式影像處理與本機人臉分析工具。">
+  <meta name="theme-color" content="#111412">
+  <title>AI 光影研究室｜互動式影像處理與人臉分析</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#workspace">跳至影像工作區</a>
+
+  <div class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="./" aria-label="光影工坊首頁">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 7.5A3.5 3.5 0 0 1 7.5 4h9A3.5 3.5 0 0 1 20 7.5v9a3.5 3.5 0 0 1-3.5 3.5h-9A3.5 3.5 0 0 1 4 16.5v-9Z"/><path d="m7.5 16 3.2-3.4 2.3 2.2 1.8-1.9 2.7 3.1M15.7 8.5h.01"/></svg>
+        </span>
+        <span class="brand-copy"><strong>AI 光影研究室</strong><small>VISION PROCESSING LAB</small></span>
+      </a>
+
+      <div class="header-status" aria-label="隱私狀態">
+        <span class="status-dot" aria-hidden="true"></span>
+        影像僅在本機處理
+      </div>
+
+      <div class="header-actions">
+        <button class="icon-button" id="undoButton" type="button" disabled aria-label="復原（Ctrl+Z）" title="復原（Ctrl+Z）">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 7-5 5 5 5M5 12h8a6 6 0 0 1 6 6"/></svg>
+        </button>
+        <button class="icon-button" id="redoButton" type="button" disabled aria-label="重做（Ctrl+Y）" title="重做（Ctrl+Y）">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 7 5 5-5 5m4-5h-8a6 6 0 0 0-6 6"/></svg>
+        </button>
+        <span class="header-divider" aria-hidden="true"></span>
+        <button class="button button-secondary" id="resetButton" type="button" disabled>重設</button>
+        <button class="button button-primary" id="exportShortcut" type="button" disabled>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 15v4h14v-4"/></svg>
+          匯出影像
+        </button>
+      </div>
+    </header>
+
+    <main id="workspace" class="workspace" tabindex="-1">
+      <aside class="tool-panel tool-panel-left" aria-label="影像編輯工具">
+        <div class="panel-scroll">
+          <section class="panel-section upload-section">
+            <div class="section-heading">
+              <div><span class="section-index">01</span><h2>來源影像</h2></div>
+            </div>
+            <label class="upload-card" id="uploadCard" for="fileInput">
+              <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+              <span class="upload-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 14v5h14v-5"/></svg>
+              </span>
+              <strong>拖放或選擇影像</strong>
+              <small>PNG、JPG、WebP、GIF · 最大 32 MP</small>
+            </label>
+            <button class="text-button" id="sampleButton" type="button">沒有影像？載入示範圖</button>
+          </section>
+
+          <section class="panel-section" aria-labelledby="presetTitle">
+            <div class="section-heading">
+              <div><span class="section-index">02</span><h2 id="presetTitle">快速風格</h2></div>
+            </div>
+            <div class="preset-grid" id="presetGrid">
+              <button class="preset is-active" type="button" data-preset="original" disabled><span class="preset-swatch swatch-original"></span><span>原始</span></button>
+              <button class="preset" type="button" data-preset="clean" disabled><span class="preset-swatch swatch-clean"></span><span>清透</span></button>
+              <button class="preset" type="button" data-preset="punch" disabled><span class="preset-swatch swatch-punch"></span><span>鮮明</span></button>
+              <button class="preset" type="button" data-preset="warm" disabled><span class="preset-swatch swatch-warm"></span><span>暖陽</span></button>
+              <button class="preset" type="button" data-preset="cool" disabled><span class="preset-swatch swatch-cool"></span><span>冷調</span></button>
+              <button class="preset" type="button" data-preset="mono" disabled><span class="preset-swatch swatch-mono"></span><span>黑白</span></button>
+            </div>
+          </section>
+
+          <section class="panel-section" aria-labelledby="adjustTitle">
+            <div class="section-heading">
+              <div><span class="section-index">03</span><h2 id="adjustTitle">光線與色彩</h2></div>
+              <button class="section-reset" id="resetAdjustments" type="button" disabled>歸零</button>
+            </div>
+
+            <div class="control-stack" id="adjustmentControls">
+              <label class="range-control" for="brightnessRange">
+                <span><b>亮度</b><output id="brightnessValue" for="brightnessRange">0</output></span>
+                <input id="brightnessRange" data-setting="brightness" type="range" min="-100" max="100" value="0" disabled>
+              </label>
+              <label class="range-control" for="contrastRange">
+                <span><b>對比</b><output id="contrastValue" for="contrastRange">0</output></span>
+                <input id="contrastRange" data-setting="contrast" type="range" min="-100" max="100" value="0" disabled>
+              </label>
+              <label class="range-control" for="saturationRange">
+                <span><b>飽和度</b><output id="saturationValue" for="saturationRange">0</output></span>
+                <input id="saturationRange" data-setting="saturation" type="range" min="-100" max="100" value="0" disabled>
+              </label>
+              <label class="range-control" for="temperatureRange">
+                <span><b>色溫</b><output id="temperatureValue" for="temperatureRange">0</output></span>
+                <input id="temperatureRange" data-setting="temperature" type="range" min="-100" max="100" value="0" disabled>
+              </label>
+              <label class="range-control" for="blurRange">
+                <span><b>模糊</b><output id="blurValue" for="blurRange">0 px</output></span>
+                <input id="blurRange" data-setting="blur" type="range" min="0" max="20" step="0.5" value="0" disabled>
+              </label>
+              <label class="range-control" for="grayscaleRange">
+                <span><b>灰階</b><output id="grayscaleValue" for="grayscaleRange">0%</output></span>
+                <input id="grayscaleRange" data-setting="grayscale" type="range" min="0" max="100" value="0" disabled>
+              </label>
+              <label class="range-control" for="sepiaRange">
+                <span><b>復古</b><output id="sepiaValue" for="sepiaRange">0%</output></span>
+                <input id="sepiaRange" data-setting="sepia" type="range" min="0" max="100" value="0" disabled>
+              </label>
+            </div>
+          </section>
+
+          <section class="panel-section" aria-labelledby="transformTitle">
+            <div class="section-heading">
+              <div><span class="section-index">04</span><h2 id="transformTitle">方向與尺寸</h2></div>
+            </div>
+            <div class="tool-button-grid">
+              <button class="tool-button" id="rotateLeft" type="button" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8V4m0 0h4M4.8 4.8A9 9 0 1 1 3 14"/></svg><span>左旋</span></button>
+              <button class="tool-button" id="rotateRight" type="button" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 8V4m0 0h-4m3.2.8A9 9 0 1 0 21 14"/></svg><span>右旋</span></button>
+              <button class="tool-button" id="flipHorizontal" type="button" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v18M4 7l5 5-5 5V7Zm16 0-5 5 5 5V7Z"/></svg><span>水平翻轉</span></button>
+              <button class="tool-button" id="flipVertical" type="button" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 12h18M7 4l5 5 5-5H7Zm0 16 5-5 5 5H7Z"/></svg><span>垂直翻轉</span></button>
+            </div>
+
+            <details class="tool-details" id="resizeDetails">
+              <summary>調整影像尺寸<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m8 10 4 4 4-4"/></svg></summary>
+              <div class="details-body">
+                <div class="dimension-grid">
+                  <label><span>寬度（px）</span><input id="resizeWidth" type="number" min="1" max="12000" disabled></label>
+                  <button class="ratio-lock is-active" id="ratioLock" type="button" aria-pressed="true" disabled aria-label="鎖定長寬比" title="鎖定長寬比"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 12a4 4 0 0 0 6.2 3.3l2-2a4 4 0 0 0-5.6-5.6l-1.1 1M15 12a4 4 0 0 0-6.2-3.3l-2 2a4 4 0 0 0 5.6 5.6l1.1-1"/></svg></button>
+                  <label><span>高度（px）</span><input id="resizeHeight" type="number" min="1" max="12000" disabled></label>
+                </div>
+                <button class="button button-secondary full-width" id="applyResize" type="button" disabled>套用新尺寸</button>
+              </div>
+            </details>
+
+            <details class="tool-details" id="cropDetails">
+              <summary>精確裁切<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m8 10 4 4 4-4"/></svg></summary>
+              <div class="details-body">
+                <p class="helper-text" id="cropHelp">輸入像素範圍，畫布會即時顯示裁切框。</p>
+                <div class="crop-grid">
+                  <label><span>X</span><input id="cropX" type="number" min="0" value="0" disabled></label>
+                  <label><span>Y</span><input id="cropY" type="number" min="0" value="0" disabled></label>
+                  <label><span>寬</span><input id="cropWidth" type="number" min="1" disabled></label>
+                  <label><span>高</span><input id="cropHeight" type="number" min="1" disabled></label>
+                </div>
+                <div class="inline-actions">
+                  <button class="button button-quiet" id="resetCrop" type="button" disabled>完整範圍</button>
+                  <button class="button button-secondary" id="applyCrop" type="button" disabled>套用裁切</button>
+                </div>
+              </div>
+            </details>
+          </section>
+        </div>
+      </aside>
+
+      <section class="stage-column" aria-label="影像預覽區">
+        <div class="stage-toolbar">
+          <div class="file-summary" id="fileSummary">
+            <span class="file-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3h7l4 4v14H7V3Z"/><path d="M14 3v5h5"/></svg></span>
+            <span><strong id="fileName">尚未載入影像</strong><small id="fileMeta">選擇檔案即可開始</small></span>
+          </div>
+          <div class="view-controls">
+            <button class="compare-button" id="compareButton" type="button" aria-pressed="false" disabled>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v18M5 5h14v14H5V5Z"/></svg>
+              前後對照
+            </button>
+            <label class="zoom-control" for="zoomSelect">
+              <span class="sr-only">預覽縮放</span>
+              <select id="zoomSelect" disabled>
+                <option value="fit">符合視窗</option>
+                <option value="0.5">50%</option>
+                <option value="1">100%</option>
+                <option value="1.5">150%</option>
+                <option value="2">200%</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="canvas-viewport" id="canvasViewport">
+          <div class="empty-canvas" id="emptyCanvas">
+            <span class="empty-visual" aria-hidden="true">
+              <svg viewBox="0 0 120 96" fill="none"><rect x="15" y="14" width="90" height="68" rx="12"/><path d="m26 69 24-25 17 17 12-13 15 21"/><circle cx="79" cy="34" r="6"/><path d="M60 5v11M60 80v11M6 48h11m86 0h11"/></svg>
+            </span>
+            <h1>把影像變成你想要的樣子</h1>
+            <p>拖放影像到這裡，或從左側選擇檔案。所有處理都在瀏覽器內完成。</p>
+            <button class="button button-primary" id="emptyUploadButton" type="button">選擇影像</button>
+          </div>
+
+          <div class="canvas-frame" id="canvasFrame" hidden>
+            <div class="canvas-stack" id="canvasStack">
+              <canvas id="editCanvas" aria-label="處理後影像預覽"></canvas>
+              <canvas id="compareCanvas" aria-label="原始影像預覽"></canvas>
+              <canvas id="faceOverlay" aria-label="人臉偵測標記圖層"></canvas>
+              <div class="compare-divider" id="compareDivider" hidden><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m9 8-4 4 4 4m6-8 4 4-4 4"/></svg></span></div>
+              <div class="crop-overlay" id="cropOverlay" hidden aria-hidden="true"></div>
+            </div>
+          </div>
+
+          <label class="compare-range" id="compareRangeWrap" for="compareRange" hidden>
+            <span class="sr-only">前後對照分隔位置</span>
+            <input id="compareRange" type="range" min="0" max="100" value="50">
+          </label>
+        </div>
+
+        <div class="stage-footer">
+          <span id="canvasStatus">準備就緒</span>
+          <span>快捷鍵：Ctrl/⌘+Z 復原 · R 右旋 · 空白鍵暫看原圖</span>
+        </div>
+      </section>
+
+      <aside class="tool-panel tool-panel-right" aria-label="影像分析與匯出">
+        <div class="panel-scroll">
+          <section class="panel-section ai-section" aria-labelledby="faceAnalysisTitle">
+            <div class="section-heading">
+              <div><span class="section-index">05</span><h2 id="faceAnalysisTitle">AI 人臉分析</h2></div>
+              <span class="ai-model-badge" id="faceModelBadge"><span aria-hidden="true"></span>離線模型待命</span>
+            </div>
+
+            <div class="ai-intro">
+              <span class="ai-intro-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3m13 5h3a2 2 0 0 0 2-2v-3M8.5 10h.01m7 0h.01M9 15c1.8 1.3 4.2 1.3 6 0"/></svg>
+              </span>
+              <div><strong>本機離線視覺模型</strong><p>不需連線；定位臉部與 6 組關鍵點，不推測身分、年齡、性別或情緒。</p></div>
+            </div>
+
+            <button class="button button-ai full-width" id="analyzeFacesButton" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m11-5h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3m11 5h3a2 2 0 0 0 2-2v-3M8 10h.01M16 10h.01M9 15c1.8 1.3 4.2 1.3 6 0"/></svg>
+              <span>啟動人臉偵測</span>
+            </button>
+
+            <div class="ai-progress" id="faceProgress" hidden>
+              <span class="ai-spinner" aria-hidden="true"></span>
+              <span id="faceProgressText" role="status" aria-live="polite">正在載入視覺模型…</span>
+              <button class="text-button ai-cancel-button" id="cancelFaceAnalysis" type="button">取消</button>
+            </div>
+
+            <div class="ai-error" id="faceError" hidden role="alert">
+              <strong>模型暫時無法使用</strong>
+              <p id="faceErrorText">請雙擊 start-offline.cmd 後再試一次。</p>
+              <button class="text-button" id="retryFaceModel" type="button">重新載入模型</button>
+            </div>
+
+            <div class="face-results" id="faceResults" hidden>
+              <div class="face-summary" aria-live="polite">
+                <div><strong id="faceCount">0</strong><span>偵測臉部</span></div>
+                <div><strong id="faceConfidence">—</strong><span>平均信心</span></div>
+                <div><strong id="faceKeypointCount">0</strong><span>關鍵點</span></div>
+              </div>
+
+              <fieldset class="analysis-options">
+                <legend>預覽標記</legend>
+                <label class="switch-row"><span><b>顯示人臉框</b><small>標示偵測範圍與信心</small></span><input id="showFaceBoxes" type="checkbox" checked><i aria-hidden="true"></i></label>
+                <label class="switch-row"><span><b>顯示關鍵點</b><small>眼、鼻、嘴與耳部位置</small></span><input id="showFaceKeypoints" type="checkbox" checked><i aria-hidden="true"></i></label>
+              </fieldset>
+
+              <div class="face-list" id="faceList" aria-label="人臉偵測結果"></div>
+
+              <div class="privacy-tools">
+                <p><strong>隱私匿名化</strong><span>對所有已偵測臉部套用效果</span></p>
+                <div class="inline-actions">
+                  <button class="button button-quiet" id="pixelateFaces" type="button">像素化</button>
+                  <button class="button button-secondary" id="blurFaces" type="button">模糊臉部</button>
+                </div>
+              </div>
+            </div>
+
+            <p class="model-note"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 4 6v5c0 5 3.4 8.6 8 10 4.6-1.4 8-5 8-10V6l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>模型已內建並在本機執行；影像不會離開此裝置。</p>
+          </section>
+
+          <section class="panel-section" aria-labelledby="histogramTitle">
+            <div class="section-heading">
+              <div><span class="section-index">06</span><h2 id="histogramTitle">色階分布</h2></div>
+              <span class="live-badge" id="analysisStatus">等待影像</span>
+            </div>
+            <div class="histogram-wrap">
+              <canvas id="histogramCanvas" width="320" height="128" aria-label="影像亮度直方圖"></canvas>
+              <div class="histogram-empty" id="histogramEmpty">載入影像後顯示</div>
+            </div>
+            <dl class="image-stats">
+              <div><dt>尺寸</dt><dd id="statDimensions">—</dd></div>
+              <div><dt>像素</dt><dd id="statMegapixels">—</dd></div>
+              <div><dt>格式</dt><dd id="statFormat">—</dd></div>
+              <div><dt>檔案大小</dt><dd id="statSize">—</dd></div>
+            </dl>
+          </section>
+
+          <section class="panel-section export-section" id="exportSection" aria-labelledby="exportTitle">
+            <div class="section-heading">
+              <div><span class="section-index">07</span><h2 id="exportTitle">匯出設定</h2></div>
+            </div>
+
+            <fieldset class="segmented-field" id="formatField" disabled>
+              <legend>檔案格式</legend>
+              <div class="segmented-control">
+                <label><input type="radio" name="format" value="image/png" checked><span>PNG</span></label>
+                <label><input type="radio" name="format" value="image/jpeg"><span>JPG</span></label>
+                <label><input type="radio" name="format" value="image/webp"><span>WebP</span></label>
+              </div>
+            </fieldset>
+
+            <label class="range-control quality-control" for="qualityRange">
+              <span><b>輸出品質</b><output id="qualityValue" for="qualityRange">92%</output></span>
+              <input id="qualityRange" type="range" min="10" max="100" value="92" disabled>
+            </label>
+
+            <label class="text-field" for="exportName">
+              <span>檔案名稱</span>
+              <input id="exportName" type="text" value="processed-image" maxlength="80" disabled>
+            </label>
+
+            <div class="export-summary" aria-live="polite">
+              <span>預估輸出</span>
+              <strong id="exportEstimate">—</strong>
+            </div>
+
+            <button class="button button-primary export-button" id="downloadButton" type="button" disabled>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 15v4h14v-4"/></svg>
+              下載處理後影像
+            </button>
+            <p class="privacy-note"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 10V8a5 5 0 0 1 10 0v2m-11 0h12v10H6V10Z"/></svg>不會將影像上傳至任何伺服器</p>
+          </section>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="sr-only" id="liveRegion" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+  <script src="face-analysis.js"></script>
+</body>
+</html>
