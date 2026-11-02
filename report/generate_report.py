@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import subprocess
+from xml.sax.saxutils import escape
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
@@ -27,7 +28,9 @@ STUDENT_NAME = "胡景翔"
 SOURCE_CODE_URL = "https://github.com/ok31756445/ai-image-studio"
 LIVE_DEMO_URL = "https://ai-image-studio-c112152350.streamlit.app/"
 OUTPUT = ROOT / "output" / "pdf" / f"{STUDENT_ID}_{STUDENT_NAME}_期中專題.pdf"
-SCREENSHOT = ROOT / "tmp" / "qa" / "python-workbench-1440.png"
+SCREENSHOT_DIR = ROOT / "tmp" / "qa" / "report-python"
+AUDIT_TRAIL = ROOT / "docs" / "AI_AUDIT_TRAIL.md"
+REPORT_DATE = "2026-11-03"
 
 
 def git_head() -> str:
@@ -137,6 +140,26 @@ def architecture_diagram():
     return diagram
 
 
+def screenshot(name: str, caption: str, max_height: float = 104 * mm):
+    path = SCREENSHOT_DIR / name
+    if not path.exists():
+        raise FileNotFoundError(f"缺少報告截圖：{path}")
+    figure = Image(str(path))
+    figure._restrictSize(168 * mm, max_height)
+    return [figure, p(caption, "CaptionZH")]
+
+
+def load_audit_entries():
+    entries = []
+    for line in AUDIT_TRAIL.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("|"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) >= 4 and cells[0].isdigit():
+            entries.append(tuple(escape(cell.replace("`", "")) for cell in cells[:4]))
+    return entries
+
+
 def build_story():
     story = []
     story += [Spacer(1, 22 * mm), p("AI 光影研究室", "TitleZH"), Spacer(1, 4 * mm), p("基於 Python 與 Streamlit 之互動式影像處理、色彩分析、卷積濾波與人臉偵測工具", "SubtitleZH"), Spacer(1, 16 * mm)]
@@ -145,7 +168,7 @@ def build_story():
         [p("學號／姓名", "H3ZH"), p(f"{STUDENT_ID}／{STUDENT_NAME}", "BodyZH")],
         [p("開發平台", "H3ZH"), p("Python 3.12、Streamlit 1.66、NumPy、Pillow、MediaPipe 1.2.0", "BodyZH")],
         [p("版本控制", "H3ZH"), p(f"Git；本報告依據 commit {git_head()} 產生", "BodyZH")],
-        [p("產製日期", "H3ZH"), p("2026-11-02", "BodyZH")],
+        [p("產製日期", "H3ZH"), p(REPORT_DATE, "BodyZH")],
     ]
     story += [table(cover_info, [38 * mm, 125 * mm], header=False, font_size=9), Spacer(1, 18 * mm)]
     story += [p(f"Public Live Demo：{LIVE_DEMO_URL}<br/>Public Source Code：{SOURCE_CODE_URL}", "CodeZH")]
@@ -201,8 +224,8 @@ def build_story():
     story += [p("Chapter 2｜可執行連結", "ChapterZH")]
     links = [
         ["項目", "目前狀態", "正式繳交要求"],
-        ["Live Demo", LIVE_DEMO_URL, "已以公開網路驗證 HTTP 200，免登入可開啟"],
-        ["Source Code", SOURCE_CODE_URL, "Public 儲存庫，包含 vendor、Dockerfile、README、完整原始碼"],
+        ["Live Demo", LIVE_DEMO_URL, f"Public；{REPORT_DATE} 公開網路驗證 HTTP 200，免登入可開啟"],
+        ["Source Code", SOURCE_CODE_URL, f"Public；{REPORT_DATE} 驗證 HTTP 200，包含完整原始碼與部署檔"],
         ["本機執行", "已完成", "start-python.cmd 或 streamlit run streamlit_app.py"],
         ["Streamlit Cloud", "已部署", "main / streamlit_app.py；packages.txt 補齊 Linux 執行期"],
         ["GitHub Pages", "保留舊 JS 版", "作為版本備份，不是目前 Python 主版本"],
@@ -221,26 +244,62 @@ def build_story():
 
     story += [p("Chapter 3｜程式功能與操作說明書", "ChapterZH"), p("3.1 模組架構與資料流", "H2ZH"), architecture_diagram(), Spacer(1, 8 * mm)]
     story += [p("資料流：上傳檔案由 Pillow 解碼並轉成 RGB NumPy 陣列；通道切換呼叫 BT.601 轉換並同步重算 256-bin 直方圖；卷積結果與 PSNR 寫入 Streamlit Session State；MediaPipe 直接以 RGB 陣列進行 CPU 推論，再由 Pillow 標註邊界框、關鍵點與信心度。")]
-    if SCREENSHOT.exists():
-        img = Image(str(SCREENSHOT))
-        img._restrictSize(168 * mm, 116 * mm)
-        story += [Spacer(1, 3 * mm), img, p("圖 3-1　Y 亮度分量、同步直方圖、卷積矩陣與本機人臉模組整合畫面", "CaptionZH")]
+    story += [p("模組責任", "H2ZH")]
+    modules = [
+        ["模組", "責任與資料"],
+        ["streamlit_app.py", "程式入口、頁面設定與工作台啟動"],
+        ["workbench.py", "上傳、分頁、狀態生命週期、操作回饋與結果呈現"],
+        ["core.py", "色彩轉換、256-bin Histogram、任意卷積核、MSE／PSNR"],
+        ["face.py", "MediaPipe CPU 推論、邊界框、關鍵點與信心度"],
+    ]
+    story += [table(modules, [42 * mm, 123 * mm])]
     story += [PageBreak()]
 
     story += [p("3.2 功能 1：影像載入與基礎解析", "H2ZH")]
     story += [p("支援 PNG、JPG/JPEG、BMP，可拖放或選檔；載入後即時顯示解析度、百萬像素、格式、檔案大小、色彩維度與每通道 8-bit。超過 3,200 萬像素時拒絕處理並提示先縮小，以限制記憶體。")]
     story += [p("操作：選擇影像 → 檢查中央預覽與右側色階分布 → 使用縮放選單檢視細節。", "CodeZH")]
+    story += screenshot("01-load-metadata.png", "圖 3-1　JPG 載入後即時顯示 553 × 554、RGB、檔案大小與 Original 強度直方圖。", 99 * mm)
+    story += [p("實測結果", "H3ZH"), p("範例圖成功解碼為 553 × 554 RGB 影像，介面顯示 JPEG 格式與 25.2 KB；中央預覽和直方圖在同一輪更新，符合即時顯示要求。")]
+    story += [PageBreak()]
+
     story += [p("3.3 功能 2：RGB／YUV 與同步直方圖", "H2ZH")]
     story += [p("Original 模式以 BT.709 亮度計算直方圖；R/G/B 模式將指定頻道映射為灰階；Y/U/V 採 BT.601 轉換，U、V 加 128 偏移以落在 0–255。每次切換都以完整非透明 RGBA 像素重算 256 個 bins，橫軸為 0–255 強度，縱軸為實際像素數量。")]
     story += [p("Y = 0.299R + 0.587G + 0.114B<br/>U = -0.168736R - 0.331264G + 0.5B + 128<br/>V = 0.5R - 0.418688G - 0.081312B + 128", "CodeZH")]
+    story += screenshot("02-y-channel-histogram.png", "圖 3-2　切換 Y 亮度分量時，中央影像與下方 0–255 像素強度直方圖同步更新。", 105 * mm)
+    story += [p("驗證重點：每個通道均保留原解析度；直方圖 256 個 bins 的總和等於影像像素數，縱軸標示像素數量而非抽樣比例。", "SmallZH")]
+    story += [PageBreak()]
+
     story += [p("3.4 功能 3：自訂卷積與 PSNR", "H2ZH")]
     story += [p("矩陣列數與欄數可分別設定為 1–31 的奇數，因此支援 3×7 等矩形核及任意有限權重。預設含原始、銳化、高斯、浮雕、邊緣偵測。正規化可選權重總和、不正規化、自訂除數，並提供 bias。零和核搭配權重總和時會攔截除以零。卷積採 clamp-to-edge；大型矩陣依權重數量降低可處理像素上限，避免工作階段失去回應。")]
     story += [p("MSE = (1 / 3WH) Σ[(R-R')² + (G-G')² + (B-B')²]<br/>PSNR = 10 log10(255² / MSE) dB", "CodeZH")]
     story += [p("PSNR 越高表示濾波結果越接近輸入。MSE=0 時兩者完全相同，PSNR 定義為無限大。套用後工具自動開啟前後對照，可拖曳中央分隔線觀察局部差異。")]
+    story += screenshot("03-kernel-psnr.png", "圖 3-3　任意奇數列／欄、矩陣編輯、Normalization、除數／偏移、可拖曳前後比較及 PSNR／MSE。", 90 * mm)
+    story += [PageBreak()]
+
+    story += [p("3.4.1 PSNR 客觀評估", "H2ZH")]
+    psnr_results = [
+        ["濾波器", "矩陣／正規化", "PSNR (dB)", "MSE", "解讀"],
+        ["Identity", "3×3／不正規化", "∞", "0.0000", "輸出與原圖完全相同"],
+        ["Sharpen", "3×3／不正規化", "25.2595", "193.6991", "強化邊緣，像素差異增加"],
+        ["Gaussian", "5×5／權重總和", "32.8450", "33.7736", "有限值中最接近原圖"],
+        ["Emboss", "3×3／不正規化", "16.8002", "1358.4919", "風格化幅度最大"],
+    ]
+    story += [table(psnr_results, [26 * mm, 39 * mm, 25 * mm, 25 * mm, 50 * mm], font_size=7.2)]
+    story += [p("結果分析", "H3ZH"), p("Identity 的 MSE=0 驗證公式與實作一致。Gaussian 5×5 的最高有限 PSNR 表示平滑後仍最接近原圖；Sharpen 為保留主體並強化邊緣的中度改變；Emboss 的最低 PSNR 與最高 MSE 符合其強烈風格化效果。PSNR 用於量化像素差異，不等同主觀美感分數。")]
+    story += [p("Normalization 防呆：權重總和模式若 ΣK=0，介面拒絕執行；自訂除數若為 0 同樣拒絕，避免 NaN／Infinity 汙染輸出。偶數尺寸、超過 31、空白或非有限數值也會收到明確錯誤。", "CodeZH")]
     story += [PageBreak()]
 
     story += [p("3.5 功能 4：人臉偵測", "H2ZH")]
     story += [p("使用 MediaPipe Face Detector（BlazeFace Short Range）模型，模型檔隨儲存庫部署並以 bytes 載入；雲端明確使用 CPU delegate。介面回傳人臉總數、平均信心、逐臉信心、邊界框與 6 組關鍵點。模型不做身分、年齡、性別或情緒推測。")]
+    story += screenshot("04-face-detection.png", "圖 3-4　多人臉實測：3 張臉均標示邊界框與信心度，右側回傳總數 3、平均信心 95.0%。", 102 * mm)
+    face_results = [
+        ["偵測結果", "Face 1", "Face 2", "Face 3"],
+        ["Confidence", "98.17%", "94.30%", "92.40%"],
+        ["關鍵點", "6 組", "6 組", "6 組"],
+    ]
+    story += [table(face_results, [36 * mm, 43 * mm, 43 * mm, 43 * mm], font_size=7.5)]
+    story += [PageBreak()]
+
     story += [p("3.6 互動與狀態安全", "H2ZH")]
     story += [p("前後比較以原生 range 控制器覆蓋整張影像，支援滑鼠、觸控與鍵盤方向鍵。上傳檔案以 SHA-256 內容雜湊識別；換圖或按下「清除處理結果」會移除 filtered、metrics、detections 與 annotated，避免舊 PSNR 或人臉框殘留。")]
     story += [p("3.7 測試案例與邊界條件", "H2ZH")]
@@ -256,33 +315,22 @@ def build_story():
         ["狀態重設", "套用卷積後按清除", "PSNR、MSE 與前後比較同步移除"],
     ]
     story += [table(tests, [30 * mm, 58 * mm, 77 * mm], font_size=7.5)]
+    story += [Spacer(1, 6 * mm), p("自動化測試摘要", "H2ZH")]
+    story += [p("共 14 項 Python 測試通過，涵蓋 BT.601 Y/U/V、256-bin Histogram、clamp-to-edge、3×7、9×9、31×31 卷積核、偶數與超限拒絕、零除數、自訂除數、MSE／PSNR，以及 Streamlit 狀態生命週期。另以瀏覽器完成上傳、通道、前後拖曳、人臉與側欄收合／展開測試。")]
     story += [PageBreak()]
 
     story += [p("Chapter 4｜AI 協作與完整 Prompt 歷程", "ChapterZH")]
-    story += [p("AI 模型：OpenAI Codex（GPT-5 系列）。以下依本專案對話順序保存原始需求、AI 產出結果與後續 Refinement。公開網址與個人資料不由 AI 猜測；詳細版同時保存在 docs/AI_AUDIT_TRAIL.md。")]
-    audit = [
-        ("技能安裝與排錯", "研究並安裝 ui-ux-pro-max；處理 unknown option --dry-run 與 Test-Path=False。", "確認 Codex skill 結構、SKILL.md 路徑及可用技能清單。", "移除不支援參數，改用支援的安裝方式並實際驗證。"),
-        ("影像工具初版", "開發具 GUI／Web App 的 AI 影像處理與人臉分析工具。", "建立三欄本機影像工作台、Canvas 編輯、分析與匯出。", "補入離線、隱私、狀態、錯誤與響應式需求。"),
-        ("模型效能", "人臉模型載入／推論太久、沒有結果，要求改成離線。", "將 MediaPipe JS、WASM 與 BlazeFace 放入 vendor。", "分離待命與分析狀態、加入逾時／取消、推論最長邊限制 1024 px。"),
-        ("介面重構", "使用 frontend-design 與 ui-ux-pro-max 調整專案並確認 Git 備份。", "建立數位暗房視覺、語意化區段與明確狀態。", "建立基準 commit，保留使用者檔案並逐批驗證。"),
-        ("前後比較", "前後對比無法拖動。", "讓可見分隔線直接處理 Pointer Events。", "擴大拖曳命中區並保留原生 range 鍵盤替代。"),
-        ("尺寸與裁切", "兩個功能都要以拖動方式完成。", "加入尺寸四角與裁切建立／移動／縮放。", "同步數值、限制邊界與像素上限、加入 Esc 與復原歷史。"),
-        ("期中規格", "加入格式、中繼資訊、RGB/YUV、Histogram、Kernel、PSNR、Face 與 PDF。", "完成四大核心模組、部署檔與報告產生器。", "加入公式、零除防呆、32 MP／12 MP 上限與驗收表。"),
-        ("PSNR 重設", "按下重設後 PSNR 是否應清除。", "判定舊指標已失去比較基準。", "重設時清除 PSNR／MSE、卷積狀態、比較狀態並取消舊運算。"),
-        ("Rubric 稽核", "依五項評分表檢查專案。", "實測讀檔、通道、直方圖、卷積、PSNR、模型、PDF 與部署。", "找出公開 URL、精確像素計數、多人臉證據與 Prompt Log 缺口。"),
-        ("本輪修正", "開始修正。", "改為完整像素直方圖，建立演算法測試、Pages 工作流與完整 Audit Trail。", "保留公開 URL、學號與姓名為必須由使用者提供的最終資料。"),
-        ("Python 遷移與最終驗收", "改用 Python，並依四大核心功能、繳交規範與 Rubric 再次檢查。", "完成 Streamlit 三欄工作台、NumPy/Pillow 演算法與 MediaPipe CPU 推論。", "修正 5×5 identity、內容雜湊狀態隔離、逐臉信心明細；8 項 Python 測試與 PDF 視覺驗證通過。"),
-    ]
-    for index, (stage, prompt, output, refinement) in enumerate(audit, 1):
+    story += [p("AI 模型：OpenAI Codex（GPT-5 系列）。以下不是對話截圖或摘要抽樣，而是依專案時間序從 docs/AI_AUDIT_TRAIL.md 載入的完整 30 筆 Prompt Audit Trail。每筆均保留原始需求、AI 產出與後續除錯／重構；公開網址與個人資料不由 AI 猜測。")]
+    for number, prompt, output, refinement in load_audit_entries():
         story.append(KeepTogether([
-            p(f"4.{index} {stage}", "H3ZH"),
+            p(f"4.{number} Prompt 歷程", "H3ZH"),
             p(f"<b>原始 Prompt／需求：</b>{prompt}<br/><b>AI 產出結果：</b>{output}<br/><b>除錯／Refinement：</b>{refinement}", "CodeZH"),
         ]))
     story += [Spacer(1, 7 * mm), p("AI 協作原則", "H2ZH")]
     for item in [
         "先以 Git commit 保存可回復基準，再進行介面與演算法修改。",
         "對模型載入、通道公式、卷積除數與拖曳座標逐項找出根因，不只改文案或等待時間。",
-        "以 npm run check、npm test、git diff --check、瀏覽器互動與 PDF 逐頁轉圖驗證。",
+        "以 14 項 Python 測試、git diff --check、瀏覽器互動與 PDF 逐頁轉圖驗證。",
         "公開部署 URL 與個人資料以實際提供及 HTTP 驗證結果為準，不由 AI 猜測。",
     ]:
         story.append(bullet(item))
@@ -293,9 +341,9 @@ def build_story():
         ["Rubric", "權重", "本專案證據"],
         ["功能完整性與正確性", "35%", "格式／RGB-YUV／Histogram／任意奇數 Kernel／PSNR／Face；14 項 Python 測試通過"],
         ["可執行與部署", "20%", "Public GitHub、Streamlit Live Demo、requirements.txt、packages.txt"],
-        ["AI Prompt Log", "20%", "Chapter 4 依時序記錄 Prompt、產出與 Refinement"],
+        ["AI Prompt Log", "20%", "Chapter 4 完整收錄 30 筆 Prompt、產出與 Refinement"],
         ["技術報告與排版", "15%", "架構圖、操作、公式、截圖、測試、頁首頁尾與頁碼"],
-        ["介面與 UX", "10%", "JS 版三欄視覺、44 px 操作區、鍵盤拖曳替代、除零／像素上限防呆"],
+        ["介面與 UX", "10%", "Python 三欄工作台、拖曳比較、側欄恢復、除零／奇數尺寸／像素上限防呆"],
     ]
     story += [table(rubric, [43 * mm, 18 * mm, 104 * mm]), Spacer(1, 9 * mm)]
     story += [p("結論", "H2ZH"), p("本專案以無伺服器影像上傳的方式完成四大核心功能，並將演算法驗證與直接操作整合在同一個工作台。Public Live Demo 與 Source Code 已部署並以公開網路驗證 HTTP 200；正式 PDF 檔名、學生資料與版本資訊均符合繳交規範。")]
