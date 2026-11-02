@@ -24,10 +24,13 @@ AI 模型：OpenAI Codex（GPT-5 系列）。以下依本專案對話順序保�
 | 18 | 按下重設後 PSNR 是否應清除 | 判定舊 PSNR 已失去比較基準 | 重設時清除 PSNR／MSE、卷積狀態與前後比較，並取消舊運算 |
 | 19 | 依評分表檢查專案 | 實際驗收四大功能、部署、Prompt Log、PDF 與 UX | 找出公開連結、精確直方圖、正向人臉案例、完整 Prompt Log 等缺口 |
 | 20 | 開始修正 | 將直方圖改為完整像素統計並加入測試與 Pages 工作流 | 補 PDF 驗收證據；公開 URL、學號與姓名留待使用者提供 |
+| 21 | 我想改以 Python 去開發 | 將主版本移植為 Streamlit、NumPy、Pillow、MediaPipe Python，保留舊版作 Git 備份 | 實測發現 MediaPipe 無法開啟中文路徑模型，改以模型位元組載入；新增拖曳前後比較、深色主題與 Python CI 測試 |
 
 ## 驗證方式
 
 - `npm run check`：檢查所有 JavaScript 語法。
 - `npm test`：驗證 BT.601 色彩公式、完整像素直方圖、PSNR 與卷積正規化防呆。
+- `python -m unittest tests.test_python_core -v`：驗證 Python 版 BT.601、256-bin 直方圖、clamp-to-edge 卷積、PSNR 與零除數防呆。
+- MediaPipe Python 實測：以多人臉照片驗證 3 張臉均產生邊界框、6 組關鍵點與信心分數。
 - 瀏覽器實測：載入示範圖、切換 R/Y、套用銳化卷積、檢查 PSNR、除數 0、防呆與離線模型。
 - PDF：產生後以 Poppler 逐頁轉成 PNG，檢查裁切、重疊、字型與頁碼。

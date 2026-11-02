@@ -27,6 +27,14 @@ jobs:
           node-version: 22
       - name: Verify JavaScript and algorithms
         run: npm run check && npm test
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify Python algorithms
+        run: |
+          python -m pip install numpy Pillow
+          python -m py_compile streamlit_app.py python_image_studio/core.py python_image_studio/face.py
+          python -m unittest tests.test_python_core -v
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

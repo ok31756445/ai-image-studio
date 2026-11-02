@@ -1,6 +1,10 @@
-# The browser application has no Python runtime dependency.
-# These packages are used only to generate and verify the project report.
+streamlit==1.66.0
+numpy>=1.26,<3
+pandas>=2.0,<3
+mediapipe==1.2.0
+Pillow==12.0.0
+
+# PDF report generation and verification.
 reportlab==4.4.4
 pdfplumber==0.11.8
 pypdf==6.1.1
-Pillow==12.0.0

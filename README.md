@@ -1,6 +1,25 @@
-# AI 光影研究室
+# AI 光影研究室 · Python
 
-一套基於 AI 輔助的互動式影像處理、色彩空間分析、卷積濾波與人臉偵測 Web App。影像與 MediaPipe 模型都在瀏覽器本機執行，執行時不需網路連線。
+目前主要版本已改為 **Python + Streamlit**，搭配 NumPy、Pillow 與 MediaPipe，提供互動式影像處理、色彩空間分析、卷積濾波與人臉偵測。原本的 JavaScript／Canvas 版本仍保留作為備份與 GitHub Pages 展示。
+
+- 原始碼：https://github.com/ok31756445/ai-image-studio
+- 現有靜態版：https://ok31756445.github.io/ai-image-studio/
+- Python Live Demo：部署至 Streamlit Community Cloud 後補上
+
+## Python 版本機啟動
+
+需要 Python 3.9 以上版本，建議 Python 3.12：
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python -m streamlit run streamlit_app.py
+```
+
+安裝完成後亦可雙擊 `start-python.cmd`。瀏覽器會開啟 `http://localhost:8501`；在命令視窗按 `Ctrl+C` 可停止服務。
+
+Python 版包含 PNG/JPG/BMP 解析、Original/R/G/B/Y/U/V 與 0–255 直方圖、3×3/5×5 可編輯卷積核、三種正規化、PSNR/MSE、可拖曳前後比較，以及本機 BlazeFace 多人臉偵測。模型以位元組載入，因此可在 Windows 中文路徑下正常使用。
 
 ## 功能
 
@@ -51,7 +70,14 @@ PSNR 以 RGB 三通道計算：
 
 若 `MSE = 0`，介面顯示 `∞ dB`。
 
-## 部署
+## Python 線上部署
+
+1. 登入 [Streamlit Community Cloud](https://share.streamlit.io/) 並連接 GitHub。
+2. 按 **Create app**，選擇 `ok31756445/ai-image-studio` 與 `main` 分支。
+3. Main file path 填入 `streamlit_app.py`，按 **Deploy**。
+4. 完成後，將公開網址補進本 README 與期中報告 Chapter 2。
+
+## 舊版 JavaScript 部署
 
 - 本機：`npm start`
 - Docker / Hugging Face Spaces：以專案內的 `Dockerfile` 建置；容器使用 `7860` 連接埠。
@@ -59,16 +85,18 @@ PSNR 以 RGB 三通道計算：
 
 專案已包含 `.github/workflows/pages.yml`。推送至 GitHub 後，在儲存庫 **Settings → Pages → Source** 選擇 **GitHub Actions**，後續每次推送 `main` 都會先執行語法與演算法測試，再自動部署。
 
-主應用程式不需要 npm 或 Python 第三方套件。`requirements.txt` 僅列出產生專題 PDF 報告的工具依賴。
+JavaScript 版不需要 npm 執行期套件；Python 版套件與產生報告所需套件均列在 `requirements.txt`。
 
 ## 驗證
 
 ```powershell
 npm run check
 npm test
+python -m py_compile streamlit_app.py python_image_studio\core.py python_image_studio\face.py
+python -m unittest tests.test_python_core -v
 ```
 
-自動化測試涵蓋 BT.601 YUV、RGB 通道、完整像素直方圖、MSE／PSNR 公式、零和卷積核與自訂除數。完整 AI 協作紀錄見 `docs/AI_AUDIT_TRAIL.md`。
+JavaScript 與 Python 自動化測試涵蓋 BT.601 YUV、RGB 通道、完整像素直方圖、MSE／PSNR 公式、零和卷積核與自訂除數。完整 AI 協作紀錄見 `docs/AI_AUDIT_TRAIL.md`。
 
 ## 測試邊界
 
