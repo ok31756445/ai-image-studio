@@ -24,6 +24,7 @@ from python_image_studio.core import (
     validate_kernel,
 )
 from python_image_studio.face import annotate_faces, detect_faces
+from python_image_studio.workbench import run_workbench
 
 ROOT = Path(__file__).resolve().parent
 FACE_MODEL = ROOT / "vendor" / "mediapipe" / "models" / "blaze_face_short_range.tflite"
@@ -111,6 +112,9 @@ def render_before_after(before: np.ndarray, after: np.ndarray) -> None:
         scrolling=False,
     )
 
+
+run_workbench()
+st.stop()
 
 st.set_page_config(page_title="AI 光影研究室 · Python", page_icon=None, layout="wide")
 st.markdown(

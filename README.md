@@ -21,6 +21,8 @@ python -m streamlit run streamlit_app.py
 
 Python 版包含 PNG/JPG/BMP 解析、Original/R/G/B/Y/U/V 與 0–255 直方圖、3×3/5×5 可編輯卷積核、三種正規化、PSNR/MSE、可拖曳前後比較，以及本機 BlazeFace 多人臉偵測。模型以位元組載入，因此可在 Windows 中文路徑下正常使用。
 
+Streamlit 介面沿用 JavaScript 版的暗色數位暗房設計：固定頂欄、左側編輯工具、中央點陣影像舞台與右側分析／匯出面板；窄螢幕會自動改為堆疊版面。
+
 Streamlit Cloud 會依根目錄的 `packages.txt` 安裝 MediaPipe／OpenCV 所需的 GL、EGL、GLES 與 GLib 執行期；人臉偵測器則明確使用 CPU delegate，避免無 GPU 的雲端容器出現共享函式庫或加速器錯誤。
 
 ## 功能

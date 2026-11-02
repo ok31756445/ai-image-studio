@@ -28,6 +28,7 @@ AI 模型：OpenAI Codex（GPT-5 系列）。以下依本專案對話順序保�
 | 22 | Streamlit Cloud 人臉偵測顯示 `libGL.so.1` 缺失 | 判定為 Linux 系統層缺少 OpenCV 圖形執行期 | 新增 `packages.txt` 安裝 `libgl1` 與 `libglib2.0-0`，由 Community Cloud 重建環境 |
 | 23 | 雲端 Log 提示 `use_container_width` 即將移除 | 確認部署已成功，訊息屬 Streamlit API 淘汰警告 | 全面改用 `width="stretch"`，避免 2025-12-31 後失效並清除重複警告 |
 | 24 | 雲端人臉偵測接著顯示 `libEGL.so.1` 缺失 | 完整 Log 證實 GL 已安裝，但 MediaPipe 原生層仍載入 EGL/GLES | 補上 `libegl1`、`libgles2`，並明確指定 MediaPipe CPU delegate |
+| 25 | Python UI 改成與原本 JavaScript 版一致 | 以原版實際畫面與 CSS token 為基準重建 Streamlit 工作台 | 改為固定頂欄、左右工具面板、中央點陣畫布；保留響應式堆疊、焦點狀態與拖曳比較的鍵盤替代操作 |
 
 ## 驗證方式
 
