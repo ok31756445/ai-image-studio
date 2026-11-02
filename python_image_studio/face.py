@@ -25,7 +25,12 @@ def _create_detector(model_asset: bytes):
     options = mp.tasks.vision.FaceDetectorOptions(
         # Supplying the bytes also avoids MediaPipe's native Windows path
         # decoder, which cannot reliably open models below non-ASCII folders.
-        base_options=mp.tasks.BaseOptions(model_asset_buffer=model_asset),
+        base_options=mp.tasks.BaseOptions(
+            model_asset_buffer=model_asset,
+            # Community Cloud provides CPU containers.  Selecting CPU
+            # explicitly prevents an unavailable GPU delegate being chosen.
+            delegate=mp.tasks.BaseOptions.Delegate.CPU,
+        ),
         running_mode=mp.tasks.vision.RunningMode.IMAGE,
         min_detection_confidence=0.5,
         min_suppression_threshold=0.3,
