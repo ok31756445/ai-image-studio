@@ -407,6 +407,15 @@ function updateCompareView() {
   elements.compareDivider.style.left = `${value}%`;
 }
 
+function clearCompareView() {
+  compareActive = false;
+  temporaryCompare = false;
+  activeComparePointerId = null;
+  elements.compareButton.setAttribute("aria-pressed", "false");
+  elements.compareDivider.classList.remove("is-dragging");
+  updateCompareView();
+}
+
 function updateCompareFromPointer(clientX) {
   const bounds = elements.canvasStack.getBoundingClientRect();
   if (!bounds.width) return;
@@ -754,6 +763,9 @@ function resetWorkspace() {
   resetSettings();
   resetCropInputs();
   syncResizeInputs();
+  setCanvasToolMode(null);
+  clearCompareView();
+  window.dispatchEvent(new CustomEvent("image-studio:workspace-reset"));
   requestRender();
   showToast("已還原為載入時的原始影像");
 }

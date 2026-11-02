@@ -49,6 +49,7 @@
 
   let channelMode = "original";
   let kernelRunning = false;
+  let evaluationRevision = 0;
 
   function clampByte(value) {
     return Math.max(0, Math.min(255, Math.round(value)));
@@ -233,7 +234,7 @@
     return { size, weights, divisor, bias };
   }
 
-  async function convolve(source, kernel) {
+  async function convolve(source, kernel, isCancelled) {
     const width = source.width;
     const height = source.height;
     const inputContext = source.getContext("2d", { willReadFrequently: true });
@@ -251,6 +252,7 @@
     let squaredError = 0;
 
     for (let y = 0; y < height; y += 1) {
+      if (isCancelled()) throw new DOMException("卷積已取消", "AbortError");
       for (let x = 0; x < width; x += 1) {
         const targetIndex = (y * width + x) * 4;
         for (let channel = 0; channel < 3; channel += 1) {
@@ -298,12 +300,13 @@
     before.height = source.height;
     before.getContext("2d", { alpha: true }).drawImage(source, 0, 0);
     kernelRunning = true;
+    const runRevision = ++evaluationRevision;
     elements.applyKernel.disabled = true;
     elements.kernelProgress.hidden = false;
     elements.kernelStatus.textContent = "計算中";
     elements.kernelStatus.classList.remove("is-ready");
     try {
-      const result = await convolve(before, kernel);
+      const result = await convolve(before, kernel, () => runRevision !== evaluationRevision);
       elements.psnrValue.textContent = Number.isFinite(result.psnr) ? `${result.psnr.toFixed(2)} dB` : "∞ dB";
       elements.psnrNote.textContent = Number.isFinite(result.psnr)
         ? `MSE ${result.mse.toFixed(4)} · 10 log₁₀(255² / MSE)`
@@ -314,6 +317,7 @@
       studio.commitCanvas(result.canvas, `卷積濾波完成 · PSNR ${Number.isFinite(result.psnr) ? result.psnr.toFixed(2) : "∞"} dB`, before);
       if (elements.compareButton.getAttribute("aria-pressed") !== "true") elements.compareButton.click();
     } catch (error) {
+      if (error?.name === "AbortError") return;
       console.error(error);
       elements.kernelStatus.textContent = "計算失敗";
       studio.notify("卷積濾波失敗：請檢查矩陣與影像尺寸");
@@ -322,6 +326,15 @@
       elements.kernelProgress.hidden = true;
       elements.applyKernel.disabled = !studio.hasImage();
     }
+  }
+
+  function resetKernelEvaluation() {
+    evaluationRevision += 1;
+    elements.psnrValue.textContent = "— dB";
+    elements.psnrNote.textContent = "套用濾波後計算";
+    elements.kernelStatus.textContent = "尚未套用";
+    elements.kernelStatus.classList.remove("is-ready");
+    elements.kernelProgress.hidden = true;
   }
 
   elements.channelModes.addEventListener("click", (event) => {
@@ -338,6 +351,7 @@
     $$(".kernel-cell").forEach((input) => { input.disabled = !studio.hasImage() || kernelRunning; });
     syncNormalization();
   });
+  window.addEventListener("image-studio:workspace-reset", resetKernelEvaluation);
 
   renderKernelMatrix();
 })();
