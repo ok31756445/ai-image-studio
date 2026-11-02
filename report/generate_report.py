@@ -22,7 +22,9 @@ from reportlab.platypus import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
-OUTPUT = ROOT / "output" / "pdf" / "期中專題_報告草稿.pdf"
+STUDENT_ID = "C112152350"
+STUDENT_NAME = "胡景翔"
+OUTPUT = ROOT / "output" / "pdf" / f"{STUDENT_ID}_{STUDENT_NAME}_期中專題.pdf"
 SCREENSHOT = ROOT / "tmp" / "qa" / "report-ui.png"
 
 
@@ -106,7 +108,7 @@ def header_footer(canvas, doc):
     canvas.line(18 * mm, 16 * mm, PAGE_W - 18 * mm, 16 * mm)
     canvas.setFont("JhengHei", 7.5)
     canvas.setFillColor(MUTED)
-    canvas.drawString(18 * mm, 10.5 * mm, "AI 光影研究室｜期中專題報告草稿")
+    canvas.drawString(18 * mm, 10.5 * mm, f"AI 光影研究室｜{STUDENT_ID} {STUDENT_NAME}")
     canvas.drawRightString(PAGE_W - 18 * mm, 10.5 * mm, f"{doc.page}")
     canvas.restoreState()
 
@@ -137,14 +139,14 @@ def build_story():
     story = []
     story += [Spacer(1, 22 * mm), p("AI 光影研究室", "TitleZH"), Spacer(1, 4 * mm), p("基於瀏覽器本機運算之互動式影像處理、色彩分析、卷積濾波與人臉偵測工具", "SubtitleZH"), Spacer(1, 16 * mm)]
     cover_info = [
-        [p("報告狀態", "H3ZH"), p("功能版草稿；待提供身分與公開部署資訊後改為正式檔名", "BodyZH")],
-        [p("學號／姓名", "H3ZH"), p("尚未提供", "BodyZH")],
+        [p("報告狀態", "H3ZH"), p("功能與排版已完成；公開部署連結待補", "BodyZH")],
+        [p("學號／姓名", "H3ZH"), p(f"{STUDENT_ID}／{STUDENT_NAME}", "BodyZH")],
         [p("開發平台", "H3ZH"), p("HTML5 Canvas、JavaScript ES2022、Node.js 18+、MediaPipe Tasks Vision 1.2.0", "BodyZH")],
         [p("版本控制", "H3ZH"), p(f"Git；本報告依據 commit {git_head()} 產生", "BodyZH")],
         [p("產製日期", "H3ZH"), p("2026-11-02", "BodyZH")],
     ]
     story += [table(cover_info, [38 * mm, 125 * mm], header=False, font_size=9), Spacer(1, 18 * mm)]
-    story += [p("正式繳交前尚需補入：學號、姓名、Public Live Demo URL、Public Source Code URL。補齊後檔名應改為「學號_姓名_期中專題.pdf」。", "CodeZH")]
+    story += [p("正式繳交前尚需補入：Public Live Demo URL 與 Public Source Code URL。正式檔名已依規範設定。", "CodeZH")]
     story += [PageBreak()]
 
     story += [p("目錄與驗收摘要", "ChapterZH")]
@@ -290,7 +292,7 @@ def build_story():
         ["介面與 UX", "10%", "拖曳＋數字替代、44 px 命中區、除零／尺寸／像素上限防呆"],
     ]
     story += [table(rubric, [43 * mm, 18 * mm, 104 * mm]), Spacer(1, 9 * mm)]
-    story += [p("結論", "H2ZH"), p("本專案以無伺服器影像上傳的方式完成四大核心功能，並將演算法驗證與直接操作整合在同一個工作台。正式繳交前只需補上學號、姓名、公開 Live Demo 與 Source Code URL，重新產生 PDF 並以 Public／無痕環境完成最終驗收。")]
+    story += [p("結論", "H2ZH"), p("本專案以無伺服器影像上傳的方式完成四大核心功能，並將演算法驗證與直接操作整合在同一個工作台。正式繳交前只需補上公開 Live Demo 與 Source Code URL，重新產生 PDF 並以 Public／無痕環境完成最終驗收。")]
     story += [p("主要檔案", "H2ZH")]
     files = [
         ["檔案", "職責"],
@@ -314,8 +316,8 @@ def main():
         leftMargin=18 * mm,
         topMargin=18 * mm,
         bottomMargin=22 * mm,
-        title="AI 光影研究室 - 期中專題報告草稿",
-        author="尚待提供",
+        title="AI 光影研究室 - 期中專題報告",
+        author=f"{STUDENT_ID} {STUDENT_NAME}",
         subject="互動式影像處理、色彩分析、卷積濾波、PSNR 與人臉偵測",
     )
     document.build(build_story(), onFirstPage=header_footer, onLaterPages=header_footer)
