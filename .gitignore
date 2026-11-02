@@ -5,3 +5,4 @@ tmp/
 output/
 __pycache__/
 .venv/
+/images.jpg
