@@ -221,9 +221,16 @@ def _load_image(uploaded_file) -> tuple[Image.Image, dict[str, str]]:
 
 
 def _clear_results() -> None:
-    for key in ("filtered", "metrics", "detections", "annotated"):
+    for key in ("filtered", "metrics", "detections", "annotated", "_next_stage_view"):
         st.session_state.pop(key, None)
     st.session_state.stage_view = "原始影像"
+
+
+def _apply_queued_stage_view(state) -> None:
+    """Apply a deferred widget value before the widget is instantiated."""
+    next_view = state.pop("_next_stage_view", None)
+    if next_view is not None:
+        state["stage_view"] = next_view
 
 
 def _activate_channel() -> None:
@@ -331,6 +338,7 @@ def _metadata_html(metadata: dict[str, str]) -> str:
 
 
 def run_workbench() -> None:
+    _apply_queued_stage_view(st.session_state)
     st.set_page_config(page_title="AI 光影研究室 · Python", page_icon=None, layout="wide", initial_sidebar_state="expanded")
     st.markdown(APP_CSS, unsafe_allow_html=True)
     _render_header()
@@ -434,7 +442,10 @@ def run_workbench() -> None:
                     detected = detect_faces(rgb, FACE_MODEL)
                     st.session_state.annotated = annotate_faces(rgb, detected)
                 st.session_state.detections = detected
-                st.session_state.stage_view = "人臉結果"
+                # The stage segmented control has already been instantiated in
+                # this run. Defer its value until the next run to comply with
+                # Streamlit's widget state lifecycle.
+                st.session_state._next_stage_view = "人臉結果"
                 st.rerun()
             except (RuntimeError, ValueError, ImportError, OSError) as error:
                 st.error(f"人臉偵測失敗：{error}。請重新啟動分析；若持續發生，請查看部署 Log。")
