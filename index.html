@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="基於 AI 輔助的互動式影像處理與本機人臉分析工具。">
-  <meta name="theme-color" content="#111412">
+  <meta name="theme-color" content="#0b0e11">
   <title>AI 光影研究室｜互動式影像處理與人臉分析</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -17,7 +17,7 @@
         <span class="brand-mark" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none"><path d="M4 7.5A3.5 3.5 0 0 1 7.5 4h9A3.5 3.5 0 0 1 20 7.5v9a3.5 3.5 0 0 1-3.5 3.5h-9A3.5 3.5 0 0 1 4 16.5v-9Z"/><path d="m7.5 16 3.2-3.4 2.3 2.2 1.8-1.9 2.7 3.1M15.7 8.5h.01"/></svg>
         </span>
-        <span class="brand-copy"><strong>AI 光影研究室</strong><small>VISION PROCESSING LAB</small></span>
+        <span class="brand-copy"><strong>AI 光影研究室</strong><small>本機影像處理與視覺分析</small></span>
       </a>
 
       <div class="header-status" aria-label="隱私狀態">
@@ -46,7 +46,7 @@
         <div class="panel-scroll">
           <section class="panel-section upload-section">
             <div class="section-heading">
-              <div><span class="section-index">01</span><h2>來源影像</h2></div>
+              <div><h2>來源影像</h2></div>
             </div>
             <label class="upload-card" id="uploadCard" for="fileInput">
               <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
@@ -61,7 +61,7 @@
 
           <section class="panel-section" aria-labelledby="presetTitle">
             <div class="section-heading">
-              <div><span class="section-index">02</span><h2 id="presetTitle">快速風格</h2></div>
+              <div><h2 id="presetTitle">快速風格</h2></div>
             </div>
             <div class="preset-grid" id="presetGrid">
               <button class="preset is-active" type="button" data-preset="original" disabled><span class="preset-swatch swatch-original"></span><span>原始</span></button>
@@ -75,7 +75,7 @@
 
           <section class="panel-section" aria-labelledby="adjustTitle">
             <div class="section-heading">
-              <div><span class="section-index">03</span><h2 id="adjustTitle">光線與色彩</h2></div>
+              <div><h2 id="adjustTitle">光線與色彩</h2></div>
               <button class="section-reset" id="resetAdjustments" type="button" disabled>歸零</button>
             </div>
 
@@ -113,7 +113,7 @@
 
           <section class="panel-section" aria-labelledby="transformTitle">
             <div class="section-heading">
-              <div><span class="section-index">04</span><h2 id="transformTitle">方向與尺寸</h2></div>
+              <div><h2 id="transformTitle">方向與尺寸</h2></div>
             </div>
             <div class="tool-button-grid">
               <button class="tool-button" id="rotateLeft" type="button" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8V4m0 0h4M4.8 4.8A9 9 0 1 1 3 14"/></svg><span>左旋</span></button>
@@ -183,8 +183,9 @@
             <span class="empty-visual" aria-hidden="true">
               <svg viewBox="0 0 120 96" fill="none"><rect x="15" y="14" width="90" height="68" rx="12"/><path d="m26 69 24-25 17 17 12-13 15 21"/><circle cx="79" cy="34" r="6"/><path d="M60 5v11M60 80v11M6 48h11m86 0h11"/></svg>
             </span>
-            <h1>把影像變成你想要的樣子</h1>
-            <p>拖放影像到這裡，或從左側選擇檔案。所有處理都在瀏覽器內完成。</p>
+            <span class="empty-eyebrow">數位暗房已就緒</span>
+            <h1>把影像帶進工作台</h1>
+            <p>拖放影像到這裡，或從左側選擇檔案。調色、分析與匯出都只在這台裝置完成。</p>
             <button class="button button-primary" id="emptyUploadButton" type="button">選擇影像</button>
           </div>
 
@@ -193,7 +194,7 @@
               <canvas id="editCanvas" aria-label="處理後影像預覽"></canvas>
               <canvas id="compareCanvas" aria-label="原始影像預覽"></canvas>
               <canvas id="faceOverlay" aria-label="人臉偵測標記圖層"></canvas>
-              <div class="compare-divider" id="compareDivider" hidden><span aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m9 8-4 4 4 4m6-8 4 4-4 4"/></svg></span></div>
+              <div class="compare-divider" id="compareDivider" hidden aria-hidden="true"><span><svg viewBox="0 0 24 24" fill="none"><path d="m9 8-4 4 4 4m6-8 4 4-4 4"/></svg></span></div>
               <div class="crop-overlay" id="cropOverlay" hidden aria-hidden="true"></div>
             </div>
           </div>
@@ -214,7 +215,7 @@
         <div class="panel-scroll">
           <section class="panel-section ai-section" aria-labelledby="faceAnalysisTitle">
             <div class="section-heading">
-              <div><span class="section-index">05</span><h2 id="faceAnalysisTitle">AI 人臉分析</h2></div>
+              <div><h2 id="faceAnalysisTitle">AI 人臉分析</h2></div>
               <span class="ai-model-badge" id="faceModelBadge"><span aria-hidden="true"></span>離線模型待命</span>
             </div>
 
@@ -271,7 +272,7 @@
 
           <section class="panel-section" aria-labelledby="histogramTitle">
             <div class="section-heading">
-              <div><span class="section-index">06</span><h2 id="histogramTitle">色階分布</h2></div>
+              <div><h2 id="histogramTitle">色階分布</h2></div>
               <span class="live-badge" id="analysisStatus">等待影像</span>
             </div>
             <div class="histogram-wrap">
@@ -288,7 +289,7 @@
 
           <section class="panel-section export-section" id="exportSection" aria-labelledby="exportTitle">
             <div class="section-heading">
-              <div><span class="section-index">07</span><h2 id="exportTitle">匯出設定</h2></div>
+              <div><h2 id="exportTitle">匯出設定</h2></div>
             </div>
 
             <fieldset class="segmented-field" id="formatField" disabled>

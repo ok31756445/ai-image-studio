@@ -107,6 +107,7 @@ let toastTimer = 0;
 let ratioLocked = true;
 let compareActive = false;
 let temporaryCompare = false;
+let activeComparePointerId = null;
 let restoringHistory = false;
 
 function formatBytes(bytes) {
@@ -380,6 +381,39 @@ function updateCompareView() {
   const value = Number(elements.compareRange.value);
   elements.compareCanvas.style.clipPath = `inset(0 ${100 - value}% 0 0)`;
   elements.compareDivider.style.left = `${value}%`;
+}
+
+function updateCompareFromPointer(clientX) {
+  const bounds = elements.canvasStack.getBoundingClientRect();
+  if (!bounds.width) return;
+  const value = clamp(((clientX - bounds.left) / bounds.width) * 100, 0, 100);
+  elements.compareRange.value = String(Math.round(value * 10) / 10);
+  updateRangeTrack(elements.compareRange);
+  updateCompareView();
+}
+
+function beginCompareDrag(event) {
+  if (!compareActive || (event.pointerType === "mouse" && event.button !== 0)) return;
+  event.preventDefault();
+  activeComparePointerId = event.pointerId;
+  elements.compareDivider.classList.add("is-dragging");
+  elements.compareDivider.setPointerCapture?.(event.pointerId);
+  updateCompareFromPointer(event.clientX);
+}
+
+function moveCompareDrag(event) {
+  if (event.pointerId !== activeComparePointerId) return;
+  event.preventDefault();
+  updateCompareFromPointer(event.clientX);
+}
+
+function endCompareDrag(event) {
+  if (event.pointerId !== activeComparePointerId) return;
+  if (elements.compareDivider.hasPointerCapture?.(event.pointerId)) {
+    elements.compareDivider.releasePointerCapture(event.pointerId);
+  }
+  activeComparePointerId = null;
+  elements.compareDivider.classList.remove("is-dragging");
 }
 
 function selectedFormat() {
@@ -807,6 +841,10 @@ function bindEvents() {
     updateCompareView();
   });
   elements.compareRange.addEventListener("input", updateCompareView);
+  elements.compareDivider.addEventListener("pointerdown", beginCompareDrag);
+  elements.compareDivider.addEventListener("pointermove", moveCompareDrag);
+  elements.compareDivider.addEventListener("pointerup", endCompareDrag);
+  elements.compareDivider.addEventListener("pointercancel", endCompareDrag);
   elements.zoomSelect.addEventListener("change", updateCanvasDisplay);
 
   elements.undoButton.addEventListener("click", undo);
