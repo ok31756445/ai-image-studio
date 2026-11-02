@@ -338,8 +338,8 @@ def _metadata_html(metadata: dict[str, str]) -> str:
 
 
 def run_workbench() -> None:
-    _apply_queued_stage_view(st.session_state)
     st.set_page_config(page_title="AI 光影研究室 · Python", page_icon=None, layout="wide", initial_sidebar_state="expanded")
+    _apply_queued_stage_view(st.session_state)
     st.markdown(APP_CSS, unsafe_allow_html=True)
     _render_header()
 

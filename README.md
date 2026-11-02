@@ -91,7 +91,7 @@ JavaScript 版不需要 npm 執行期套件；Python 版套件與產生報告所
 npm run check
 npm test
 python -m py_compile streamlit_app.py python_image_studio\core.py python_image_studio\face.py
-python -m unittest tests.test_python_core -v
+python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
 JavaScript 與 Python 自動化測試涵蓋 BT.601 YUV、RGB 通道、完整像素直方圖、MSE／PSNR 公式、零和卷積核與自訂除數。完整 AI 協作紀錄見 `docs/AI_AUDIT_TRAIL.md`。
