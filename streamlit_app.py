@@ -141,7 +141,7 @@ with st.sidebar:
     st.header("來源影像")
     uploaded = st.file_uploader("選擇 PNG、JPG/JPEG 或 BMP", type=["png", "jpg", "jpeg", "bmp"])
     st.caption("最大 32 MP；卷積上限 12 MP")
-    if st.button("清除處理結果", use_container_width=True):
+    if st.button("清除處理結果", width="stretch"):
         st.session_state.pop("filtered", None)
         st.session_state.pop("metrics", None)
         st.session_state.pop("detections", None)
@@ -171,10 +171,10 @@ tab_info, tab_channels, tab_kernel, tab_face = st.tabs(
 with tab_info:
     left, right = st.columns([1.45, 1])
     with left:
-        st.image(original_image, caption=uploaded.name, use_container_width=True)
+        st.image(original_image, caption=uploaded.name, width="stretch")
     with right:
         st.subheader("影像中繼資訊")
-        st.dataframe(metadata_table(metadata), hide_index=True, use_container_width=True)
+        st.dataframe(metadata_table(metadata), hide_index=True, width="stretch")
         st.caption("支援 PNG、JPEG 與 BMP；解碼後統一以 RGB 8-bit 進行演算法運算。")
 
 with tab_channels:
@@ -183,7 +183,7 @@ with tab_channels:
     bins = histogram(rgb, mode)
     view_column, histogram_column = st.columns([1.2, 1])
     with view_column:
-        st.image(view, caption=f"{mode} 通道", use_container_width=True, clamp=True)
+        st.image(view, caption=f"{mode} 通道", width="stretch", clamp=True)
     with histogram_column:
         st.subheader("同步直方圖")
         chart = pd.DataFrame({"像素強度": np.arange(256), "像素數量": bins}).set_index("像素強度")
@@ -204,10 +204,10 @@ with tab_kernel:
             initial,
             key=f"kernel:{size}:{preset}",
             hide_index=True,
-            use_container_width=True,
+            width="stretch",
             num_rows="fixed",
         )
-    if st.button("套用卷積濾波", type="primary", use_container_width=True):
+    if st.button("套用卷積濾波", type="primary", width="stretch"):
         try:
             spec = validate_kernel(matrix.to_numpy(), normalization, custom_divisor, bias)
             with st.spinner("正在計算卷積與 PSNR…"):
@@ -230,12 +230,12 @@ with tab_kernel:
             data=encode_image(st.session_state.filtered),
             file_name=f"{Path(uploaded.name).stem}-filtered.png",
             mime="image/png",
-            use_container_width=True,
+            width="stretch",
         )
 
 with tab_face:
     st.caption("MediaPipe BlazeFace 模型由專案本機檔案載入；回傳所有臉部邊界框、關鍵點與信心分數。")
-    if st.button("啟動人臉偵測", type="primary", use_container_width=True):
+    if st.button("啟動人臉偵測", type="primary", width="stretch"):
         try:
             with st.spinner("正在載入模型並分析影像…"):
                 detections = detect_faces(rgb, FACE_MODEL)
@@ -250,7 +250,7 @@ with tab_face:
         count_metric, confidence_metric = st.columns(2)
         count_metric.metric("偵測人臉", len(detections))
         confidence_metric.metric("平均信心", "—" if not detections else f"{average:.1%}")
-        st.image(st.session_state.annotated, caption="人臉邊界框與關鍵點", use_container_width=True)
+        st.image(st.session_state.annotated, caption="人臉邊界框與關鍵點", width="stretch")
         if detections:
             result_rows = [
                 {
@@ -261,6 +261,6 @@ with tab_face:
                 }
                 for index, item in enumerate(detections, 1)
             ]
-            st.dataframe(result_rows, hide_index=True, use_container_width=True)
+            st.dataframe(result_rows, hide_index=True, width="stretch")
         else:
             st.warning("未偵測到臉部；請嘗試正面、清楚且光線充足的影像。")
