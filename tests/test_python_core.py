@@ -29,6 +29,14 @@ class PythonImageAlgorithmsTest(unittest.TestCase):
         self.assertEqual(int(y_channel[0, 0]), 76)
         self.assertEqual(int(y_channel[0, 1]), 150)
 
+    def test_bt601_uv_channels(self):
+        u_channel = channel_plane(self.image, "U")
+        v_channel = channel_plane(self.image, "V")
+        self.assertEqual(int(u_channel[0, 0]), 85)
+        self.assertEqual(int(v_channel[0, 0]), 255)
+        self.assertEqual(int(u_channel[0, 1]), 44)
+        self.assertEqual(int(v_channel[0, 1]), 21)
+
     def test_histogram_counts_all_pixels(self):
         bins = histogram(self.image, "R")
         self.assertEqual(int(bins.sum()), 4)
@@ -42,6 +50,18 @@ class PythonImageAlgorithmsTest(unittest.TestCase):
         np.testing.assert_array_equal(result, self.image)
         self.assertEqual(mse, 0)
         self.assertTrue(math.isinf(score))
+
+    def test_five_by_five_identity_kernel(self):
+        weights = np.zeros((5, 5), dtype=float)
+        weights[2, 2] = 1
+        result = apply_convolution(self.image, validate_kernel(weights, "權重總和"))
+        np.testing.assert_array_equal(result, self.image)
+
+    def test_custom_divisor(self):
+        spec = validate_kernel(np.ones((3, 3)), "自訂除數", custom_divisor=9)
+        result = apply_convolution(self.image, spec)
+        self.assertEqual(result.shape, self.image.shape)
+        self.assertEqual(spec.divisor, 9)
 
     def test_zero_sum_normalization_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "不可為 0"):

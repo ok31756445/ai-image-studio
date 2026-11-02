@@ -4,7 +4,7 @@
 
 - 原始碼：https://github.com/ok31756445/ai-image-studio
 - 現有靜態版：https://ok31756445.github.io/ai-image-studio/
-- Python Live Demo：部署至 Streamlit Community Cloud 後補上
+- Python Live Demo：https://ai-image-studio-c112152350.streamlit.app/
 
 ## Python 版本機啟動
 
@@ -25,28 +25,22 @@ Streamlit 介面沿用 JavaScript 版的暗色數位暗房設計：固定頂欄�
 
 Streamlit Cloud 會依根目錄的 `packages.txt` 安裝 MediaPipe／OpenCV 所需的 GL、EGL、GLES 與 GLib 執行期；人臉偵測器則明確使用 CPU delegate，避免無 GPU 的雲端容器出現共享函式庫或加速器錯誤。
 
-## 功能
+## Python 主版本功能
 
-- PNG、JPG/JPEG、BMP、WebP、GIF 拖放、檔案選擇與剪貼簿貼上
-- 即時顯示解析度、百萬像素、格式、檔案大小、RGBA 色彩維度與位元深度
+- PNG、JPG/JPEG、BMP 拖放與檔案選擇
+- 即時顯示解析度、百萬像素、格式、檔案大小、色彩維度與位元深度
 - Original、RGB 分離通道與 YUV（Y/U/V）分量檢視
 - 通道切換時以完整非透明像素同步更新 0–255 像素強度／像素數量直方圖
 - 3×3、5×5 自訂卷積核、正規化除數、偏移量與常用濾波預設
 - 卷積前後滑桿對照與 PSNR／MSE 即時計算
-- 亮度、對比、飽和度、色溫、模糊、灰階、復古濾鏡
-- 六種快速風格預設
-- 90° 旋轉、水平／垂直翻轉
-- 可直接在畫布拖曳的精確裁切與等比例尺寸調整（同時保留數字輸入）
-- 多步復原／重做與一鍵重設
 - 原圖／處理結果滑桿對照
 - 即時亮度直方圖與影像資訊
 - MediaPipe AI 人臉偵測、信心分數與 6 組臉部關鍵點
-- 自動以最長邊 1024 px 推論並映射回原圖，避免高解析照片造成長時間卡頓
-- 模型載入逾時、取消分析與完成耗時回饋
-- 單一臉部快速裁切
-- 全臉模糊與像素化匿名處理
-- PNG、JPEG、WebP 品質調整與下載
+- 每張臉的邊界框、信心度明細與多人臉總數
+- PNG 處理結果下載
 - 鍵盤操作、清楚焦點、reduced-motion 與響應式版面
+
+舊版 JavaScript／Canvas 的裁切、尺寸拖曳、幾何變換、濾鏡、復原／重做與匿名化功能仍保留在原始碼及 GitHub Pages，但不列為目前 Python 主版本的核心驗收功能。
 
 ## 離線啟動
 
@@ -79,7 +73,7 @@ PSNR 以 RGB 三通道計算：
 1. 登入 [Streamlit Community Cloud](https://share.streamlit.io/) 並連接 GitHub。
 2. 按 **Create app**，選擇 `ok31756445/ai-image-studio` 與 `main` 分支。
 3. Main file path 填入 `streamlit_app.py`，按 **Deploy**。
-4. 完成後，將公開網址補進本 README 與期中報告 Chapter 2。
+4. 目前公開網址為 https://ai-image-studio-c112152350.streamlit.app/；重新部署後請以無痕視窗確認可免登入開啟。
 
 ## 舊版 JavaScript 部署
 
@@ -104,7 +98,7 @@ JavaScript 與 Python 自動化測試涵蓋 BT.601 YUV、RGB 通道、完整像�
 
 ## 測試邊界
 
-- 影像上限：3,200 萬像素；卷積上限：1,200 萬像素，以防瀏覽器記憶體耗盡。
+- 影像上限：3,200 萬像素；卷積上限：1,200 萬像素，以控制雲端工作階段的記憶體與等待時間。
 - 卷積核所有欄位必須是有限數值；正規化除數不可為 0。
-- 拖曳裁切限制在影像邊界內；尺寸調整限制為 1–12,000 px 且不超過 3,200 萬像素。
-- 人臉模型逾時、取消、無人臉與多人臉情境皆有明確狀態回饋。
+- 上傳檔案以內容雜湊識別；換圖或清除結果會同步清除 PSNR、MSE、卷積與人臉結果。
+- 人臉偵測對無人臉與多人臉情境提供明確結果，逐臉顯示信心度與邊界框。

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 from html import escape
 from io import BytesIO
 from pathlib import Path
@@ -31,7 +32,10 @@ ROOT = Path(__file__).resolve().parent.parent
 FACE_MODEL = ROOT / "vendor" / "mediapipe" / "models" / "blaze_face_short_range.tflite"
 
 PRESETS: dict[str, dict[int, list[list[float]]]] = {
-    "原始": {3: [[0, 0, 0], [0, 1, 0], [0, 0, 0]], 5: np.eye(5).tolist()},
+    "原始": {
+        3: [[0, 0, 0], [0, 1, 0], [0, 0, 0]],
+        5: [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 1, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]],
+    },
     "邊緣銳化": {3: [[0, -1, 0], [-1, 5, -1], [0, -1, 0]]},
     "高斯平滑": {
         3: [[1, 2, 1], [2, 4, 2], [1, 2, 1]],
@@ -337,7 +341,9 @@ def run_workbench() -> None:
         st.error(str(error))
         st.stop()
 
-    file_token = f"{uploaded.name}:{uploaded.size}"
+    # The content digest prevents stale PSNR/face results when two different
+    # files happen to share the same name and byte size.
+    file_token = hashlib.sha256(uploaded.getvalue()).hexdigest()
     if st.session_state.get("file_token") != file_token:
         st.session_state.file_token = file_token
         _clear_results()
@@ -428,6 +434,17 @@ def run_workbench() -> None:
             confidence_metric.metric("平均信心", "—" if not detections else f"{average:.1%}")
             if not detections:
                 st.warning("未偵測到臉部；請改用正面、清楚且光線充足的照片。")
+            else:
+                confidence_rows = [
+                    {
+                        "臉部": index,
+                        "信心度": f"{item['confidence']:.1%}",
+                        "邊界框": f"({item['x']}, {item['y']}) · {item['width']}×{item['height']} px",
+                    }
+                    for index, item in enumerate(detections, 1)
+                ]
+                with st.expander("查看每張臉的信心度與邊界框"):
+                    st.dataframe(confidence_rows, hide_index=True, width="stretch")
         st.markdown('<div class="privacy-note">模型在目前的 Python 工作階段執行；影像不會送往第三方辨識服務。</div>', unsafe_allow_html=True)
         _rule()
         _heading("色階分布", st.session_state.channel_mode)
