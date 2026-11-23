@@ -10,6 +10,7 @@ import numpy as np
 from PIL import Image
 
 ChannelMode = Literal["Original", "R", "G", "B", "Y", "U", "V"]
+AdjustmentSpace = Literal["RGB", "YUV"]
 NormalizationMode = Literal["權重總和", "不正規化", "自訂除數"]
 
 MAX_IMAGE_PIXELS = 32_000_000
@@ -94,6 +95,49 @@ def histogram(image: Image.Image | np.ndarray, mode: ChannelMode) -> np.ndarray:
     else:
         values = channel_plane(rgb, mode)
     return np.bincount(values.reshape(-1), minlength=256).astype(np.int64)
+
+
+def adjust_color(
+    image: Image.Image | np.ndarray,
+    space: AdjustmentSpace,
+    first_gain: float = 1.0,
+    second_gain: float = 1.0,
+    third_gain: float = 1.0,
+) -> np.ndarray:
+    """Adjust RGB gains or BT.601 Y/U/V component gains.
+
+    In YUV mode, U and V are scaled around the neutral chroma value 128 so a
+    gain of zero removes that chroma component instead of shifting the image.
+    """
+    gains = np.asarray([first_gain, second_gain, third_gain], dtype=np.float32)
+    if not np.isfinite(gains).all():
+        raise ValueError("色彩增益必須是有限數值")
+    if np.any(gains < 0) or np.any(gains > 2):
+        raise ValueError("色彩增益必須介於 0% 與 200%")
+
+    rgb = ensure_rgb(image)
+    if np.allclose(gains, 1.0):
+        return rgb.copy()
+
+    source = rgb.astype(np.float32)
+    if space == "RGB":
+        adjusted = source * gains.reshape(1, 1, 3)
+    elif space == "YUV":
+        red, green, blue = source[..., 0], source[..., 1], source[..., 2]
+        y = (0.299 * red + 0.587 * green + 0.114 * blue) * gains[0]
+        u = (-0.168736 * red - 0.331264 * green + 0.5 * blue) * gains[1]
+        v = (0.5 * red - 0.418688 * green - 0.081312 * blue) * gains[2]
+        adjusted = np.stack(
+            (
+                y + 1.402 * v,
+                y - 0.344136 * u - 0.714136 * v,
+                y + 1.772 * u,
+            ),
+            axis=-1,
+        )
+    else:
+        raise ValueError(f"不支援的色彩調整空間：{space}")
+    return np.clip(np.rint(adjusted), 0, 255).astype(np.uint8)
 
 
 def validate_kernel(

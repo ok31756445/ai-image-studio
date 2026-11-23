@@ -186,7 +186,7 @@ def build_story():
     story += [p("完成度摘要", "H2ZH")]
     for item in [
         "已完成 PNG、JPG/JPEG、BMP 讀取、即時顯示與中繼資訊解析。",
-        "已完成 Original、R/G/B、Y/U/V 通道檢視與同步 0–255 強度直方圖。",
+        "已完成 Original、R/G/B、Y/U/V 通道檢視、RGB/YUV 參數調整與同步 0–255 強度直方圖。",
         "已完成 1–31 奇數列／欄的方形或矩形卷積核、三種正規化模式、偏移量、PSNR 與前後對比。",
         "已完成 MediaPipe 多人臉框、總數、逐臉信心分數與 6 組臉部關鍵點。",
         "已完成內容雜湊狀態隔離；換圖或清除結果時同步移除 PSNR 與舊人臉結果。",
@@ -263,7 +263,7 @@ def build_story():
     story += [PageBreak()]
 
     story += [p("3.3 功能 2：RGB／YUV 與同步直方圖", "H2ZH")]
-    story += [p("Original 模式以 BT.709 亮度計算直方圖；R/G/B 模式將指定頻道映射為灰階；Y/U/V 採 BT.601 轉換，U、V 加 128 偏移以落在 0–255。每次切換都以完整非透明 RGBA 像素重算 256 個 bins，橫軸為 0–255 強度，縱軸為實際像素數量。")]
+    story += [p("Original 模式以 BT.709 亮度計算直方圖；R/G/B 模式將指定頻道映射為灰階；Y/U/V 採 BT.601 轉換，U、V 加 128 偏移以落在 0–255。介面另提供 R/G/B 及 Y/U/V 0–200% 增益控制；調整結果即時同步預覽、Histogram、卷積、人臉與匯出。每次切換都以完整像素重算 256 個 bins，橫軸為 0–255 強度，縱軸為實際像素數量。")]
     story += [p("Y = 0.299R + 0.587G + 0.114B<br/>U = -0.168736R - 0.331264G + 0.5B + 128<br/>V = 0.5R - 0.418688G - 0.081312B + 128", "CodeZH")]
     story += screenshot("02-y-channel-histogram.png", "圖 3-2　切換 Y 亮度分量時，中央影像與下方 0–255 像素強度直方圖同步更新。", 105 * mm)
     story += [p("驗證重點：每個通道均保留原解析度；直方圖 256 個 bins 的總和等於影像像素數，縱軸標示像素數量而非抽樣比例。", "SmallZH")]
@@ -316,11 +316,11 @@ def build_story():
     ]
     story += [table(tests, [30 * mm, 58 * mm, 77 * mm], font_size=7.5)]
     story += [Spacer(1, 6 * mm), p("自動化測試摘要", "H2ZH")]
-    story += [p("共 14 項 Python 測試通過，涵蓋 BT.601 Y/U/V、256-bin Histogram、clamp-to-edge、3×7、9×9、31×31 卷積核、偶數與超限拒絕、零除數、自訂除數、MSE／PSNR，以及 Streamlit 狀態生命週期。另以瀏覽器完成上傳、通道、前後拖曳、人臉與側欄收合／展開測試。")]
+    story += [p("共 18 項 Python 測試通過，涵蓋 BT.601 Y/U/V、RGB/YUV 參數調整、256-bin Histogram、clamp-to-edge、3×7、9×9、31×31 卷積核、偶數與超限拒絕、零除數、自訂除數、MSE／PSNR，以及 Streamlit 狀態生命週期。另以瀏覽器完成上傳、通道、前後拖曳、人臉、側欄與 390px 響應式測試。")]
     story += [PageBreak()]
 
     story += [p("Chapter 4｜AI 協作與完整 Prompt 歷程", "ChapterZH")]
-    story += [p("AI 模型：OpenAI Codex（GPT-5 系列）。以下不是對話截圖或摘要抽樣，而是依專案時間序從 docs/AI_AUDIT_TRAIL.md 載入的完整 30 筆 Prompt Audit Trail。每筆均保留原始需求、AI 產出與後續除錯／重構；公開網址與個人資料不由 AI 猜測。")]
+    story += [p("AI 模型：OpenAI Codex（GPT 系列）。以下不是對話截圖或摘要抽樣，而是依專案時間序從 docs/AI_AUDIT_TRAIL.md 載入的完整 31 筆 Prompt Audit Trail。每筆均保留原始需求、AI 產出與後續除錯／重構；公開網址與個人資料不由 AI 猜測。")]
     for number, prompt, output, refinement in load_audit_entries():
         story.append(KeepTogether([
             p(f"4.{number} Prompt 歷程", "H3ZH"),
@@ -330,7 +330,7 @@ def build_story():
     for item in [
         "先以 Git commit 保存可回復基準，再進行介面與演算法修改。",
         "對模型載入、通道公式、卷積除數與拖曳座標逐項找出根因，不只改文案或等待時間。",
-        "以 14 項 Python 測試、git diff --check、瀏覽器互動與 PDF 逐頁轉圖驗證。",
+        "以 18 項 Python 測試、git diff --check、瀏覽器互動與 PDF 逐頁轉圖驗證。",
         "公開部署 URL 與個人資料以實際提供及 HTTP 驗證結果為準，不由 AI 猜測。",
     ]:
         story.append(bullet(item))
@@ -339,9 +339,9 @@ def build_story():
     story += [p("評分標準對照與結論", "ChapterZH")]
     rubric = [
         ["Rubric", "權重", "本專案證據"],
-        ["功能完整性與正確性", "35%", "格式／RGB-YUV／Histogram／任意奇數 Kernel／PSNR／Face；14 項 Python 測試通過"],
+        ["功能完整性與正確性", "35%", "格式／RGB-YUV 調整／Histogram／任意奇數 Kernel／PSNR／Face；18 項 Python 測試通過"],
         ["可執行與部署", "20%", "Public GitHub、Streamlit Live Demo、requirements.txt、packages.txt"],
-        ["AI Prompt Log", "20%", "Chapter 4 完整收錄 30 筆 Prompt、產出與 Refinement"],
+        ["AI Prompt Log", "20%", "Chapter 4 完整收錄 31 筆 Prompt、產出與 Refinement"],
         ["技術報告與排版", "15%", "架構圖、操作、公式、截圖、測試、頁首頁尾與頁碼"],
         ["介面與 UX", "10%", "Python 三欄工作台、拖曳比較、側欄恢復、除零／奇數尺寸／像素上限防呆"],
     ]

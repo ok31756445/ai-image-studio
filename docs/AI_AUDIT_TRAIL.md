@@ -34,6 +34,7 @@ AI 模型：OpenAI Codex（GPT-5 系列）。以下依本專案對話順序保�
 | 28 | 人臉完成後發生 `StreamlitWidgetAlreadyInstantiatedError` | 找出程式在工作區 segmented control 建立後直接改寫同名 Session State | 改為暫存 `_next_stage_view`，於下一輪 widget 建立前套用；新增工作台狀態生命週期回歸測試 |
 | 29 | 自訂卷積核加入任意尺寸 | 將固定 3×3／5×5 改為可分別設定列數與欄數 | 支援 1–31 奇數尺寸及矩形核，加入偶數／超限防呆、通用高斯預設與依運算量調整的像素上限 |
 | 30 | 彙整為符合繳交規範的單一 PDF，包含 Chapter 1–4、公開連結、四大功能截圖、PSNR、測試與完整 Prompt 歷程 | 擷取目前 Python／Streamlit 介面的四組真實操作畫面，整理實測指標、架構、操作與完整 Audit Trail | 公開驗證 Live Demo／GitHub HTTP 200，以 Poppler 將成品逐頁渲染並修正裁切、分頁與可讀性問題 |
+| 31 | 使用 frontend-design 與 ui-ux-pro-max 改善排版、色彩、響應式與流程，並讓 RGB／YUV 可調參數 | 建立暗房儀器台視覺、漸進揭露色彩控制；RGB 提供 R/G/B 增益，YUV 提供 Y 亮度與 U/V 色度增益 | 調整結果同步預覽、直方圖、卷積、人臉與匯出；新增數值範圍防呆、重設流程、18 項測試及 390px 無水平溢位驗證 |
 
 ## 驗證方式
 

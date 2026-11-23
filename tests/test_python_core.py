@@ -6,6 +6,7 @@ import unittest
 import numpy as np
 
 from python_image_studio.core import (
+    adjust_color,
     apply_convolution,
     channel_plane,
     histogram,
@@ -42,6 +43,25 @@ class PythonImageAlgorithmsTest(unittest.TestCase):
         self.assertEqual(int(bins.sum()), 4)
         self.assertEqual(int(bins[0]), 2)
         self.assertEqual(int(bins[255]), 2)
+
+    def test_rgb_adjustment_scales_each_channel(self):
+        result = adjust_color(self.image, "RGB", 0.5, 1.0, 0.0)
+        np.testing.assert_array_equal(result[0, 0], [128, 0, 0])
+        np.testing.assert_array_equal(result[0, 1], [0, 255, 0])
+        np.testing.assert_array_equal(result[1, 0], [0, 0, 0])
+
+    def test_yuv_identity_is_exact(self):
+        result = adjust_color(self.image, "YUV", 1.0, 1.0, 1.0)
+        np.testing.assert_array_equal(result, self.image)
+
+    def test_yuv_zero_chroma_produces_grayscale(self):
+        result = adjust_color(self.image, "YUV", 1.0, 0.0, 0.0)
+        self.assertTrue(np.array_equal(result[..., 0], result[..., 1]))
+        self.assertTrue(np.array_equal(result[..., 1], result[..., 2]))
+
+    def test_color_adjustment_rejects_out_of_range_gain(self):
+        with self.assertRaisesRegex(ValueError, "0% 與 200%"):
+            adjust_color(self.image, "RGB", 2.1, 1.0, 1.0)
 
     def test_identity_kernel_and_infinite_psnr(self):
         spec = validate_kernel([[0, 0, 0], [0, 1, 0], [0, 0, 0]], "權重總和")

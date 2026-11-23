@@ -30,6 +30,7 @@ Streamlit Cloud 會依根目錄的 `packages.txt` 安裝 MediaPipe／OpenCV 所�
 - PNG、JPG/JPEG、BMP 拖放與檔案選擇
 - 即時顯示解析度、百萬像素、格式、檔案大小、色彩維度與位元深度
 - Original、RGB 分離通道與 YUV（Y/U/V）分量檢視
+- RGB 可分別調整 R/G/B 0–200% 增益；YUV 可調整 Y 亮度與 U/V 色度 0–200%，即時同步預覽與直方圖
 - 通道切換時以完整非透明像素同步更新 0–255 像素強度／像素數量直方圖
 - 1×1 至 31×31 的奇數尺寸自訂卷積核，亦支援 3×7 等矩形核、正規化除數、偏移量與常用濾波預設
 - 卷積前後滑桿對照與 PSNR／MSE 即時計算
@@ -57,6 +58,8 @@ YUV 採 BT.601：
 - `Y = 0.299R + 0.587G + 0.114B`
 - `U = -0.168736R - 0.331264G + 0.5B + 128`
 - `V = 0.5R - 0.418688G - 0.081312B + 128`
+
+參數調整時，Y 直接縮放亮度；U/V 則以中性色度為中心縮放，再以 BT.601 反轉換回 RGB。調整結果會成為卷積、人臉偵測與匯出的輸入；按「重設色彩參數」可回到 100%。
 
 卷積核的列數與欄數可分別設定為 1–31 的奇數，因此支援方形與矩形核；奇數限制確保中心錨點唯一。邊界像素採 clamp-to-edge 延伸。正規化可選權重總和、不正規化或自訂非零除數；零和矩陣會阻止除以零。大型卷積核會依權重數量自動降低影像像素上限，避免雲端工作階段長時間無回應。
 
@@ -94,7 +97,7 @@ python -m py_compile streamlit_app.py python_image_studio\core.py python_image_s
 python -m unittest discover -s tests -p "test_*.py" -v
 ```
 
-JavaScript 與 Python 自動化測試涵蓋 BT.601 YUV、RGB 通道、完整像素直方圖、MSE／PSNR 公式、零和卷積核與自訂除數。完整 AI 協作紀錄見 `docs/AI_AUDIT_TRAIL.md`。
+JavaScript 與 Python 自動化測試涵蓋 BT.601 YUV、RGB 通道、RGB/YUV 參數調整、完整像素直方圖、MSE／PSNR 公式、零和卷積核與自訂除數。目前 Python 測試共 18 項。完整 AI 協作紀錄見 `docs/AI_AUDIT_TRAIL.md`。
 
 ## 測試邊界
 

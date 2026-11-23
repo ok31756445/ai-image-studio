@@ -17,6 +17,7 @@ from PIL import Image, UnidentifiedImageError
 
 from .core import (
     MAX_IMAGE_PIXELS,
+    adjust_color,
     apply_convolution,
     channel_plane,
     encode_image,
@@ -31,6 +32,16 @@ from .face import annotate_faces, detect_faces
 
 ROOT = Path(__file__).resolve().parent.parent
 FACE_MODEL = ROOT / "vendor" / "mediapipe" / "models" / "blaze_face_short_range.tflite"
+
+COLOR_DEFAULTS = {
+    "adjustment_space": "RGB",
+    "rgb_red_gain": 100,
+    "rgb_green_gain": 100,
+    "rgb_blue_gain": 100,
+    "yuv_y_gain": 100,
+    "yuv_u_gain": 100,
+    "yuv_v_gain": 100,
+}
 
 PRESETS: dict[str, dict[int, list[list[float]]]] = {
     "原始": {
@@ -50,10 +61,10 @@ PRESETS: dict[str, dict[int, list[list[float]]]] = {
 APP_CSS = """
 <style>
 :root {
-  --bg:#0b0e11; --surface:#11161b; --raised:#182027; --hover:#202a32;
-  --stage:#080b0e; --text:#edf2f5; --subtle:#b7c0c7; --muted:#7f8c96;
-  --line:#27323a; --line-strong:#3a4852; --accent:#e8a84a;
-  --accent-strong:#f1ba68; --accent-ink:#211506; --cyan:#58c4d8;
+  --bg:#090d0f; --surface:#11181b; --raised:#182226; --hover:#202d31;
+  --stage:#06090a; --text:#f3f5f4; --subtle:#c4cecb; --muted:#879691;
+  --line:#273538; --line-strong:#3a4d50; --accent:#f0a63a;
+  --accent-strong:#ffc05e; --accent-ink:#241603; --cyan:#63c7d6;
   --danger:#ff7d70; --focus:#7bd9e8;
 }
 html, body, [class*="css"] { font-family:"Segoe UI Variable","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif; }
@@ -68,7 +79,7 @@ html, body, [class*="css"] { font-family:"Segoe UI Variable","Noto Sans TC","Mic
 [data-testid="stExpandSidebarButton"]:hover { border-color:var(--accent) !important; color:var(--accent) !important; background:var(--hover) !important; }
 [data-testid="stExpandSidebarButton"]:focus-visible { outline:2px solid var(--focus) !important; outline-offset:2px; }
 footer { display:none !important; }
-.block-container { max-width:none; padding:84px 16px 18px; }
+.block-container { max-width:none; padding:84px clamp(10px,1.4vw,22px) 22px; }
 [data-testid="stSidebar"] { top:68px; height:calc(100dvh - 68px); background:var(--surface); border-right:1px solid var(--line); }
 [data-testid="stSidebar"] > div:first-child { padding-top:14px; }
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"] { gap:.72rem; }
@@ -82,7 +93,7 @@ footer { display:none !important; }
   box-shadow:0 7px 24px rgba(232,168,74,.16); }
 .brand-mark svg { width:23px; height:23px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 .brand-copy strong,.brand-copy small { display:block; }
-.brand-copy strong { font:700 17px/1.15 Bahnschrift,"Segoe UI Variable",sans-serif; letter-spacing:.035em; }
+.brand-copy strong { font:720 18px/1.15 Bahnschrift,"Segoe UI Variable",sans-serif; letter-spacing:.02em; }
 .brand-copy small { margin-top:3px; color:var(--muted); font-size:10px; font-weight:650; }
 .session-status { display:inline-flex; align-items:center; gap:8px; padding:7px 12px; border:1px solid var(--line);
   border-radius:7px; color:var(--subtle); background:#151c22; font-size:12px; font-weight:650; }
@@ -92,7 +103,7 @@ footer { display:none !important; }
 
 .panel-heading { display:flex; align-items:center; justify-content:space-between; gap:10px;
   margin:6px 0 10px; padding-left:10px; border-left:2px solid var(--accent); }
-.panel-heading h2 { margin:0; color:var(--text); font-size:13px; line-height:1.3; letter-spacing:.02em; }
+.panel-heading h2 { margin:0; color:var(--text); font-size:14px; line-height:1.35; letter-spacing:.01em; }
 .panel-badge { padding:4px 8px; border-radius:999px; color:var(--accent); background:rgba(232,168,74,.08); font-size:9px; font-weight:800; }
 .panel-badge.ready { color:#bdeff6; background:rgba(88,196,216,.09); }
 .panel-copy { margin:0 0 12px; color:var(--muted); font-size:11px; line-height:1.6; }
@@ -140,6 +151,14 @@ div[data-testid="stColumn"]:has(.analysis-anchor) { padding:4px 16px 18px; borde
 
 [data-baseweb="select"] > div, [data-baseweb="input"] > div, [data-testid="stNumberInput"] input {
   color:var(--text); background:#0d1216; border-color:var(--line-strong); }
+[data-testid="stSlider"] { padding:2px 0 7px; }
+[data-testid="stSlider"] [role="slider"] { color:var(--accent); }
+[data-testid="stExpander"] { border:1px solid var(--line) !important; border-radius:10px !important; background:#0d1315; overflow:hidden; }
+[data-testid="stExpander"] summary { min-height:46px; font-weight:720; }
+[data-testid="stExpander"] summary:hover { color:var(--accent); }
+[data-testid="stExpander"] summary:focus-visible,
+[data-baseweb="select"] *:focus-visible,
+[data-testid="stNumberInput"] input:focus-visible { outline:2px solid var(--focus) !important; outline-offset:2px; }
 [data-testid="stDataEditor"] { border:1px solid var(--line); border-radius:9px; overflow:hidden; }
 [data-testid="stSegmentedControl"] [role="group"] { display:flex; flex-wrap:wrap; width:100%; }
 [data-testid="stSegmentedControl"] button { min-width:calc(25% - 2px); min-height:42px; flex:1 0 calc(25% - 2px); padding-inline:7px; }
@@ -157,6 +176,10 @@ div[data-testid="stColumn"]:has(.analysis-anchor) { padding:4px 16px 18px; borde
 .meta-item small { color:var(--muted); font-size:9px; } .meta-item strong { margin-top:4px; color:var(--subtle); font-size:11px; font-weight:700; }
 .privacy-note { padding:10px 11px; border:1px solid rgba(88,196,216,.18); border-radius:9px;
   color:#a9dce4; background:rgba(88,196,216,.06); font-size:10px; line-height:1.6; }
+.color-adjustment-status { display:flex; justify-content:space-between; gap:10px; margin:8px 0 12px; padding:10px 11px;
+  border:1px solid rgba(240,166,58,.22); border-radius:9px; color:var(--subtle); background:rgba(240,166,58,.055);
+  font-size:10px; line-height:1.5; }
+.color-adjustment-status strong { color:var(--accent); font-variant-numeric:tabular-nums; white-space:nowrap; }
 
 @media (max-width:900px) {
   .workbench-header { grid-template-columns:1fr auto; height:62px; padding:0 14px; }
@@ -178,6 +201,8 @@ div[data-testid="stColumn"]:has(.analysis-anchor) { padding:4px 16px 18px; borde
   .empty-stage { min-height:52dvh; padding:24px 12px; }
   .empty-stage h1 { font-size:27px; }
   [data-testid="stSegmentedControl"] button { min-width:calc(50% - 2px); flex-basis:calc(50% - 2px); }
+  [data-testid="stPills"] [role="listbox"], [data-testid="stRadio"] [role="radiogroup"] { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .color-adjustment-status { flex-direction:column; }
 }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto !important; transition:none !important; } }
 </style>
@@ -231,9 +256,13 @@ def _load_image(uploaded_file) -> tuple[Image.Image, dict[str, str]]:
     return image.convert("RGB"), image_metadata(image, uploaded_file.name, len(raw))
 
 
-def _clear_results() -> None:
+def _discard_derived_results() -> None:
     for key in ("filtered", "metrics", "detections", "annotated", "_next_stage_view"):
         st.session_state.pop(key, None)
+
+
+def _clear_results() -> None:
+    _discard_derived_results()
     st.session_state.stage_view = "原始影像"
 
 
@@ -242,6 +271,42 @@ def _apply_queued_stage_view(state) -> None:
     next_view = state.pop("_next_stage_view", None)
     if next_view is not None:
         state["stage_view"] = next_view
+
+
+def _ensure_color_defaults(state) -> None:
+    for key, value in COLOR_DEFAULTS.items():
+        state.setdefault(key, value)
+
+
+def _reset_color_values(state) -> None:
+    for key, value in COLOR_DEFAULTS.items():
+        state[key] = value
+
+
+def _current_color_settings(state) -> tuple[str, tuple[float, float, float]]:
+    space = state.get("adjustment_space", "RGB")
+    keys = (
+        ("rgb_red_gain", "rgb_green_gain", "rgb_blue_gain")
+        if space == "RGB"
+        else ("yuv_y_gain", "yuv_u_gain", "yuv_v_gain")
+    )
+    return space, tuple(float(state.get(key, 100)) / 100 for key in keys)
+
+
+def _has_color_adjustment(state) -> bool:
+    _, gains = _current_color_settings(state)
+    return any(abs(gain - 1.0) > 1e-9 for gain in gains)
+
+
+def _color_adjustment_changed() -> None:
+    _discard_derived_results()
+    st.session_state.stage_view = "色彩調整" if _has_color_adjustment(st.session_state) else "原始影像"
+
+
+def _reset_color_adjustments() -> None:
+    _reset_color_values(st.session_state)
+    _discard_derived_results()
+    st.session_state.stage_view = "原始影像"
 
 
 def _activate_channel() -> None:
@@ -268,6 +333,48 @@ def _channel_buttons(*, disabled: bool = False) -> None:
             on_change=_activate_channel,
             label_visibility="collapsed",
         )
+
+
+def _color_adjustment_controls() -> None:
+    active = _has_color_adjustment(st.session_state)
+    with st.expander("調整 RGB／YUV 參數", expanded=active):
+        st.segmented_control(
+            "調整色彩空間",
+            ["RGB", "YUV"],
+            key="adjustment_space",
+            on_change=_color_adjustment_changed,
+            width="stretch",
+        )
+        if st.session_state.adjustment_space == "RGB":
+            labels = (
+                ("R 紅色增益", "rgb_red_gain", "控制紅色通道輸出強度"),
+                ("G 綠色增益", "rgb_green_gain", "控制綠色通道輸出強度"),
+                ("B 藍色增益", "rgb_blue_gain", "控制藍色通道輸出強度"),
+            )
+        else:
+            labels = (
+                ("Y 亮度增益", "yuv_y_gain", "控制 BT.601 亮度分量"),
+                ("U 藍色色度", "yuv_u_gain", "以中性值為中心調整藍色色度"),
+                ("V 紅色色度", "yuv_v_gain", "以中性值為中心調整紅色色度"),
+            )
+        for label, key, help_text in labels:
+            st.slider(
+                label,
+                min_value=0,
+                max_value=200,
+                step=1,
+                key=key,
+                format="%d%%",
+                help=help_text,
+                on_change=_color_adjustment_changed,
+            )
+        space, gains = _current_color_settings(st.session_state)
+        values = " · ".join(f"{round(value * 100):d}%" for value in gains)
+        st.markdown(
+            f'<div class="color-adjustment-status"><span>即時套用至預覽、直方圖與後續分析</span><strong>{space} · {values}</strong></div>',
+            unsafe_allow_html=True,
+        )
+        st.button("重設色彩參數", on_click=_reset_color_adjustments, width="stretch")
 
 
 def _render_header() -> None:
@@ -351,6 +458,7 @@ def _metadata_html(metadata: dict[str, str]) -> str:
 def run_workbench() -> None:
     st.set_page_config(page_title="AI 光影研究室 · Python", page_icon=None, layout="wide", initial_sidebar_state="expanded")
     _apply_queued_stage_view(st.session_state)
+    _ensure_color_defaults(st.session_state)
     st.markdown(APP_CSS, unsafe_allow_html=True)
     _render_header()
 
@@ -377,10 +485,14 @@ def run_workbench() -> None:
     if st.session_state.get("file_token") != file_token:
         st.session_state.file_token = file_token
         _clear_results()
+        _reset_color_values(st.session_state)
         st.session_state.channel_mode = "Original"
     st.session_state.setdefault("channel_mode", "Original")
     st.session_state.setdefault("stage_view", "原始影像")
     rgb = ensure_rgb(original_image)
+    adjustment_space, adjustment_gains = _current_color_settings(st.session_state)
+    color_adjusted = _has_color_adjustment(st.session_state)
+    working_rgb = adjust_color(rgb, adjustment_space, *adjustment_gains)
 
     with st.sidebar:
         _rule()
@@ -408,8 +520,8 @@ def run_workbench() -> None:
             try:
                 spec = validate_kernel(matrix.to_numpy(), normalization, custom_divisor, bias)
                 with st.spinner("正在計算濾波與 PSNR…"):
-                    filtered = apply_convolution(rgb, spec)
-                    score, mse = psnr(rgb, filtered)
+                    filtered = apply_convolution(working_rgb, spec)
+                    score, mse = psnr(working_rgb, filtered)
                 st.session_state.filtered = filtered
                 st.session_state.metrics = (score, mse)
                 st.session_state.stage_view = "卷積結果"
@@ -428,7 +540,10 @@ def run_workbench() -> None:
             f'<div class="stage-toolbar"><span class="file-summary"><strong>{escape(uploaded.name)}</strong><small>{escape(metadata["解析度"])} · {escape(metadata["檔案大小"])}</small></span><span class="stage-state">工作台檢視</span></div>',
             unsafe_allow_html=True,
         )
-        available_views = ["原始影像", "色彩通道"]
+        available_views = ["原始影像"]
+        if color_adjusted:
+            available_views.append("色彩調整")
+        available_views.append("色彩通道")
         if "filtered" in st.session_state:
             available_views.append("卷積結果")
         if "annotated" in st.session_state:
@@ -436,17 +551,20 @@ def run_workbench() -> None:
         if st.session_state.stage_view not in available_views:
             st.session_state.stage_view = "原始影像"
         stage_view = st.segmented_control("工作區檢視", available_views, key="stage_view", width="stretch", label_visibility="collapsed")
-        if stage_view == "色彩通道":
+        if stage_view == "色彩調整":
+            st.image(working_rgb, caption=f"{adjustment_space} 參數調整結果", width="stretch")
+        elif stage_view == "色彩通道":
             mode = st.session_state.channel_mode
-            st.image(channel_plane(rgb, mode), caption=f"{mode} 通道檢視", width="stretch", clamp=True)
+            suffix = f" · 已套用 {adjustment_space} 調整" if color_adjusted else ""
+            st.image(channel_plane(working_rgb, mode), caption=f"{mode} 通道檢視{suffix}", width="stretch", clamp=True)
         elif stage_view == "卷積結果" and "filtered" in st.session_state:
-            _render_compare(rgb, st.session_state.filtered)
+            _render_compare(working_rgb, st.session_state.filtered)
         elif stage_view == "人臉結果" and "annotated" in st.session_state:
             st.image(st.session_state.annotated, caption="人臉邊界框與關鍵點", width="stretch")
         else:
             st.image(original_image, caption="原始影像", width="stretch")
         st.markdown(
-            '<div class="stage-footer"><span>影像已就緒</span><span>通道、卷積與人臉結果可由上方切換</span></div>',
+            f'<div class="stage-footer"><span>影像已就緒</span><span>{"目前以「" + adjustment_space + "」調整結果進行分析" if color_adjusted else "通道、卷積與人臉結果可由上方切換"}</span></div>',
             unsafe_allow_html=True,
         )
 
@@ -454,7 +572,8 @@ def run_workbench() -> None:
         st.markdown('<div class="analysis-anchor"></div>', unsafe_allow_html=True)
         _heading("色彩空間與通道", st.session_state.channel_mode)
         _channel_buttons()
-        st.markdown('<p class="panel-copy">切換 RGB 或 BT.601 YUV 分量；中央畫布與直方圖同步更新。</p>', unsafe_allow_html=True)
+        st.markdown('<p class="panel-copy">先檢視 RGB／BT.601 YUV 分量，再用參數控制完整彩色輸出；中央畫布與直方圖會同步更新。</p>', unsafe_allow_html=True)
+        _color_adjustment_controls()
         _rule()
         detections = st.session_state.get("detections")
         _heading("AI 人臉分析", "分析完成" if detections is not None else "離線模型待命", ready=True)
@@ -462,8 +581,8 @@ def run_workbench() -> None:
         if st.button("啟動人臉偵測", type="primary", width="stretch"):
             try:
                 with st.spinner("正在載入模型並分析影像…"):
-                    detected = detect_faces(rgb, FACE_MODEL)
-                    st.session_state.annotated = annotate_faces(rgb, detected)
+                    detected = detect_faces(working_rgb, FACE_MODEL)
+                    st.session_state.annotated = annotate_faces(working_rgb, detected)
                 st.session_state.detections = detected
                 # The stage segmented control has already been instantiated in
                 # this run. Defer its value until the next run to comply with
@@ -493,15 +612,15 @@ def run_workbench() -> None:
         st.markdown('<div class="privacy-note">模型在目前的 Python 工作階段執行；影像不會送往第三方辨識服務。</div>', unsafe_allow_html=True)
         _rule()
         _heading("色階分布", st.session_state.channel_mode)
-        bins = histogram(rgb, st.session_state.channel_mode)
+        bins = histogram(working_rgb, st.session_state.channel_mode)
         chart = pd.DataFrame({"像素強度": np.arange(256), "像素數量": bins}).set_index("像素強度")
         st.bar_chart(chart, y="像素數量", height=220)
         st.caption(f"0–255 · 完整統計 {int(bins.sum()):,} 個像素")
         st.markdown(_metadata_html(metadata), unsafe_allow_html=True)
         _rule()
         _heading("匯出設定")
-        export_image = st.session_state.get("filtered", rgb)
-        export_suffix = "filtered" if "filtered" in st.session_state else "original"
+        export_image = st.session_state.get("filtered", working_rgb)
+        export_suffix = "filtered" if "filtered" in st.session_state else ("color-adjusted" if color_adjusted else "original")
         st.download_button(
             "下載處理後影像",
             data=encode_image(export_image),
